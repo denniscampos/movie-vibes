@@ -20,13 +20,14 @@ model Movie {
   releaseDate String
 
   selectedBy String
-  watched    Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   categoryId String
   category   Category @relation(fields: [categoryId], references: [id])
+
+  status MovieStatus @default(NOT_WATCHED)
 }
 
 model Category {
@@ -37,4 +38,10 @@ model Category {
   updatedAt DateTime @updatedAt
 
   movies Movie[]
+}
+
+enum MovieStatus {
+  WATCHED
+  NOT_WATCHED
+  UPCOMING
 }

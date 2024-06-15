@@ -1,4 +1,4 @@
-import { Link, json, useLoaderData } from "@remix-run/react";
+import { Link, json, useFetcher, useLoaderData } from "@remix-run/react";
 import { DataTable } from "~/components/DataTable";
 
 import { ColumnDef } from "@tanstack/react-table";
@@ -9,17 +9,38 @@ import { Checkbox } from "~/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
-import { fetchMovies } from "~/models/movie.server";
+import { changeMovieStatus, fetchMovies } from "~/models/movie.server";
+import { MovieStatus } from "@prisma/client";
+import { ActionFunctionArgs } from "@remix-run/node";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
 
 export const loader = async () => {
   const movies = await fetchMovies();
 
   return json(movies);
+};
+
+export const action = async ({ request }: ActionFunctionArgs) => {
+  const body = await request.formData();
+  const movieId = body.get("movieId") as string;
+  const movieStatus = body.get("movieStatus") as MovieStatus;
+
+  const action = body.get("_action");
+
+  if (action === "movieStatus") {
+    await changeMovieStatus({ id: movieId, status: movieStatus });
+
+    return json({ message: "Movie status updated" });
+  }
 };
 
 export default function MoviesPage() {
@@ -46,6 +67,7 @@ export type Movies = {
     name: string;
   };
   selectedBy: string;
+  status: MovieStatus;
 };
 
 export const columns: ColumnDef<Movies>[] = [
@@ -99,9 +121,19 @@ export const columns: ColumnDef<Movies>[] = [
     header: "Selected By",
   },
   {
+    accessorKey: "status",
+    header: "Status",
+    cell: ({ row }) => {
+      const movieId = row.original.id;
+      const movieStatus = row.original.status;
+
+      return <SelectMovieStatus movieStatus={movieStatus} movieId={movieId} />;
+    },
+  },
+  {
     id: "actions",
     cell: ({ row }) => {
-      const payment = row.original;
+      const movieId = row.original.id;
 
       return (
         <DropdownMenu>
@@ -113,15 +145,55 @@ export const columns: ColumnDef<Movies>[] = [
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem onClick={() => navigator.clipboard.writeText(payment.id)}>
-              Copy payment ID
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>View customer</DropdownMenuItem>
-            <DropdownMenuItem>View payment details</DropdownMenuItem>
+            <Link
+              className="hover:bg-slate-100 relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+              to={`/movies/${movieId}/update`}
+            >
+              Edit
+            </Link>
+
+            {/* <DropdownMenuItem onClick={() => navigator.clipboard.writeText("")}>
+              Remove
+            </DropdownMenuItem> */}
           </DropdownMenuContent>
         </DropdownMenu>
       );
     },
   },
 ];
+
+interface SelectMovieStatusProps {
+  movieId: string;
+  movieStatus: MovieStatus;
+}
+
+function SelectMovieStatus({ movieStatus, movieId }: SelectMovieStatusProps) {
+  const fetcher = useFetcher();
+
+  return (
+    <Select
+      defaultValue={movieStatus}
+      onValueChange={(value) => {
+        fetcher.submit(
+          {
+            movieId,
+            movieStatus: value,
+            _action: "movieStatus",
+          },
+          {
+            method: "POST",
+          }
+        );
+      }}
+    >
+      <SelectTrigger className="w-[180px]">
+        <SelectValue placeholder="Movie Status" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value={MovieStatus.NOT_WATCHED}>Not Watched</SelectItem>
+        <SelectItem value={MovieStatus.UPCOMING}>Upcoming</SelectItem>
+        <SelectItem value={MovieStatus.WATCHED}>Watched</SelectItem>
+      </SelectContent>
+    </Select>
+  );
+}

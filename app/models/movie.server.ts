@@ -1,3 +1,4 @@
+import { MovieStatus } from "@prisma/client";
 import { db } from "~/db.server";
 
 export const fetchMovies = async () => {
@@ -7,6 +8,7 @@ export const fetchMovies = async () => {
       movieName: true,
       releaseDate: true,
       selectedBy: true,
+      status: true,
       category: {
         select: {
           name: true,
@@ -21,7 +23,7 @@ export const fetchMovies = async () => {
 export const fetchUpcomingMovies = async () => {
   const upcomingMovies = await db.movie.findMany({
     where: {
-      watched: true,
+      status: "UPCOMING",
     },
     select: {
       id: true,
@@ -33,6 +35,7 @@ export const fetchUpcomingMovies = async () => {
           name: true,
         },
       },
+      status: true,
     },
   });
 
@@ -44,11 +47,13 @@ export const createMovie = async ({
   releaseDate,
   selectedBy,
   categoryName,
+  status,
 }: {
   movieName: string;
   releaseDate: string;
   selectedBy: string;
   categoryName: string;
+  status: MovieStatus;
 }) => {
   return db.movie.create({
     data: {
@@ -60,6 +65,24 @@ export const createMovie = async ({
       movieName,
       releaseDate,
       selectedBy,
+      status,
+    },
+  });
+};
+
+export const changeMovieStatus = async ({
+  id,
+  status,
+}: {
+  id: string;
+  status: MovieStatus;
+}) => {
+  return db.movie.update({
+    where: {
+      id,
+    },
+    data: {
+      status,
     },
   });
 };

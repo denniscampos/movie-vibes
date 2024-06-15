@@ -1,12 +1,28 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import { MovieStatus } from "@prisma/client";
 import { ActionFunctionArgs, redirect } from "@remix-run/node";
 import { Form, json, useNavigation } from "@remix-run/react";
 import { Loader2 } from "lucide-react";
+import { FieldValues } from "react-hook-form";
 import { useRemixForm, getValidatedFormData } from "remix-hook-form";
 import { z } from "zod";
 import { Button } from "~/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
 import { createMovie } from "~/models/movie.server";
 
 const createMovieSchema = z.object({
@@ -14,6 +30,7 @@ const createMovieSchema = z.object({
   releaseDate: z.string().min(1, { message: "Release date is required" }),
   selectedBy: z.string().min(1, { message: "Selected by is required" }),
   categoryName: z.string().min(1, { message: "Category name is required" }),
+  status: z.nativeEnum(MovieStatus),
 });
 
 type MovieSchema = z.infer<typeof createMovieSchema>;
@@ -29,13 +46,14 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     return json({ errors, receivedValues });
   }
 
-  const { movieName, categoryName, releaseDate, selectedBy } = data;
+  const { movieName, categoryName, releaseDate, selectedBy, status } = data;
 
   await createMovie({
     movieName,
     releaseDate,
     selectedBy,
     categoryName,
+    status,
   });
 
   return redirect(`/movies`);
@@ -48,6 +66,7 @@ export default function MoviesCreatePage() {
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useRemixForm<MovieSchema>({
     mode: "onSubmit",
@@ -57,51 +76,93 @@ export default function MoviesCreatePage() {
       releaseDate: "",
       selectedBy: "",
       categoryName: "",
+      status: MovieStatus.NOT_WATCHED,
     },
   });
 
   return (
-    <div>
-      <h2>Movies</h2>
+    <Card className="w-[350px] mx-auto">
+      <CardHeader>
+        <CardTitle>Add a Movie</CardTitle>
+        <CardDescription>
+          Add a movie to keep track of our movie watching.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Form method="POST" onSubmit={handleSubmit}>
+          <div className="space-y-2">
+            <Label htmlFor="movieName">Movie Name</Label>
+            <Input
+              {...register("movieName")}
+              id="movieName"
+              name="movieName"
+              type="text"
+            />
+            <p className="text-red-500">{errors.movieName && errors.movieName.message}</p>
+          </div>
 
-      <Form method="POST" onSubmit={handleSubmit}>
-        <Label htmlFor="movieName">Movie Name</Label>
-        <Input {...register("movieName")} id="movieName" name="movieName" type="text" />
-        <p className="text-red-500">{errors.movieName && errors.movieName.message}</p>
+          <div className="space-y-2">
+            <Label htmlFor="releaseDate">Release Date</Label>
+            <Input
+              {...register("releaseDate")}
+              id="releaseDate"
+              name="releaseDate"
+              type="text"
+            />
+            <p className="text-red-500">
+              {errors.releaseDate && errors.releaseDate.message}
+            </p>
+          </div>
 
-        <Label htmlFor="releaseDate">Release Date</Label>
-        <Input
-          {...register("releaseDate")}
-          id="releaseDate"
-          name="releaseDate"
-          type="text"
-        />
-        <p className="text-red-500">{errors.releaseDate && errors.releaseDate.message}</p>
+          <div className="space-y-2">
+            <Label htmlFor="categoryName">Category</Label>
+            <Input
+              {...register("categoryName")}
+              id="categoryName"
+              name="categoryName"
+              type="text"
+            />
+            <p className="text-red-500">
+              {errors.categoryName && errors.categoryName.message}
+            </p>
 
-        <Label htmlFor="categoryName">Category</Label>
-        <Input
-          {...register("categoryName")}
-          id="categoryName"
-          name="categoryName"
-          type="text"
-        />
-        <p className="text-red-500">
-          {errors.categoryName && errors.categoryName.message}
-        </p>
+            <Label htmlFor="selectedBy">Selected By</Label>
+            <Input
+              {...register("selectedBy")}
+              id="selectedBy"
+              name="selectedBy"
+              type="text"
+            />
+            <p className="text-red-500">
+              {errors.selectedBy && errors.selectedBy.message}
+            </p>
+          </div>
 
-        <Label htmlFor="selectedBy">Selected By</Label>
-        <Input
-          {...register("selectedBy")}
-          id="selectedBy"
-          name="selectedBy"
-          type="text"
-        />
-        <p className="text-red-500">{errors.selectedBy && errors.selectedBy.message}</p>
+          <div>
+            <SelectMovieStatus setValue={setValue} />
+            <p className="text-red-500">{errors.status && errors.status.message}</p>
+          </div>
 
-        <Button type="submit" disabled={loading}>
-          {loading ? <Loader2 className="animate-spin" /> : "Submit"}
-        </Button>
-      </Form>
-    </div>
+          <Button className="mt-2" type="submit" disabled={loading}>
+            {loading ? <Loader2 className="animate-spin" /> : "Add Movie"}
+          </Button>
+        </Form>
+      </CardContent>
+    </Card>
+  );
+}
+
+function SelectMovieStatus({ setValue }: { setValue: FieldValues["setValue"] }) {
+  return (
+    <Select onValueChange={(value) => setValue("status", value)}>
+      <SelectTrigger className="w-[180px]">
+        <SelectValue placeholder="Movie Status" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value={MovieStatus.NOT_WATCHED}>Not Watched</SelectItem>
+        <SelectItem value={MovieStatus.UPCOMING}>Upcoming</SelectItem>
+        <SelectItem value={MovieStatus.WATCHED}>Watched</SelectItem>
+      </SelectContent>
+    </Select>
   );
 }

@@ -1,5 +1,6 @@
-import { json, type MetaFunction } from "@remix-run/node";
-import { useLoaderData } from "@remix-run/react";
+import { MovieStatus } from "@prisma/client";
+import { ActionFunctionArgs, json, type MetaFunction } from "@remix-run/node";
+import { useFetcher, useLoaderData } from "@remix-run/react";
 import { ColumnDef } from "@tanstack/react-table";
 import { ArrowUpDown, MoreHorizontal } from "lucide-react";
 import { useState } from "react";
@@ -11,10 +12,16 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
-import { fetchUpcomingMovies } from "~/models/movie.server";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
+import { changeMovieStatus, fetchUpcomingMovies } from "~/models/movie.server";
 
 export const meta: MetaFunction = () => {
   return [
@@ -31,13 +38,32 @@ export const loader = async () => {
   return json(upcomingMovies);
 };
 
+export const action = async ({ request }: ActionFunctionArgs) => {
+  const body = await request.formData();
+  const movieId = body.get("movieId") as string;
+  const movieStatus = body.get("movieStatus") as MovieStatus;
+
+  const action = body.get("_action");
+
+  if (action === "movieStatus") {
+    await changeMovieStatus({ id: movieId, status: movieStatus });
+
+    return json({ message: "Movie status updated" });
+  }
+};
+
 export default function Index() {
   const loaderData = useLoaderData<typeof loader>();
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
+  const [isSpinning, setIsSpinning] = useState(false);
 
   const spin = () => {
-    const randomIndex = Math.floor(Math.random() * items.length);
-    setSelectedItem(items[randomIndex]);
+    setIsSpinning(true);
+    setTimeout(() => {
+      const randomIndex = Math.floor(Math.random() * items.length);
+      setSelectedItem(items[randomIndex]);
+      setIsSpinning(false);
+    }, 3000); // Spin for 3 seconds
   };
 
   return (
@@ -45,9 +71,23 @@ export default function Index() {
       <h2 className="text-3xl font-semibold">Upcoming Movies</h2>
       <DataTable columns={columns} data={loaderData} />
 
-      <div>
-        <button onClick={spin}>Spin Picker</button>
-        {selectedItem && <div>Selected: {selectedItem}</div>}
+      <div className="mt-10">
+        <h3 className="text-2xl font-semibold mb-2">WHOSE MOVIE ARE WE PICKING?</h3>
+        <Button onClick={spin}>Spin Picker</Button>
+
+        <div className="mt-10 flex justify-center items-center">
+          {isSpinning && (
+            <div className="spinner-border animate-spin inline-block w-16 h-16 border-4 rounded-full border-t-blue-500 border-r-transparent border-b-transparent border-l-blue-500">
+              <span className="sr-only">Loading...</span>
+            </div>
+          )}
+
+          {!isSpinning && selectedItem && (
+            <div className="text-2xl font-bold text-green-600">
+              Selected: {selectedItem}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -61,6 +101,7 @@ export type Movies = {
     name: string;
   };
   selectedBy: string;
+  status: MovieStatus;
 };
 
 export const columns: ColumnDef<Movies>[] = [
@@ -114,6 +155,16 @@ export const columns: ColumnDef<Movies>[] = [
     header: "Selected By",
   },
   {
+    accessorKey: "status",
+    header: "Status",
+    cell: ({ row }) => {
+      const movieId = row.original.id;
+      const movieStatus = row.original.status;
+
+      return <SelectMovieStatus movieStatus={movieStatus} movieId={movieId} />;
+    },
+  },
+  {
     id: "actions",
     cell: ({ row }) => {
       const payment = row.original;
@@ -129,14 +180,47 @@ export const columns: ColumnDef<Movies>[] = [
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuItem onClick={() => navigator.clipboard.writeText(payment.id)}>
-              Copy payment ID
+              Edit
             </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>View customer</DropdownMenuItem>
-            <DropdownMenuItem>View payment details</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       );
     },
   },
 ];
+
+interface SelectMovieStatusProps {
+  movieId: string;
+  movieStatus: MovieStatus;
+}
+
+function SelectMovieStatus({ movieStatus, movieId }: SelectMovieStatusProps) {
+  const fetcher = useFetcher();
+
+  return (
+    <Select
+      defaultValue={movieStatus}
+      onValueChange={(value) => {
+        fetcher.submit(
+          {
+            movieId,
+            movieStatus: value,
+            _action: "movieStatus",
+          },
+          {
+            method: "POST",
+          }
+        );
+      }}
+    >
+      <SelectTrigger className="w-[180px]">
+        <SelectValue placeholder="Movie Status" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value={MovieStatus.NOT_WATCHED}>Not Watched</SelectItem>
+        <SelectItem value={MovieStatus.UPCOMING}>Upcoming</SelectItem>
+        <SelectItem value={MovieStatus.WATCHED}>Watched</SelectItem>
+      </SelectContent>
+    </Select>
+  );
+}
