@@ -76,7 +76,7 @@ export default function MoviesCreatePage() {
       releaseDate: "",
       selectedBy: "",
       categoryName: "",
-      status: MovieStatus.NOT_WATCHED,
+      status: "NOT_WATCHED",
     },
   });
 
@@ -159,9 +159,9 @@ function SelectMovieStatus({ setValue }: { setValue: FieldValues["setValue"] }) 
         <SelectValue placeholder="Movie Status" />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value={MovieStatus.NOT_WATCHED}>Not Watched</SelectItem>
-        <SelectItem value={MovieStatus.UPCOMING}>Upcoming</SelectItem>
-        <SelectItem value={MovieStatus.WATCHED}>Watched</SelectItem>
+        <SelectItem value="NOT WATCHED">Not Watched</SelectItem>
+        <SelectItem value="UPCOMING">Upcoming</SelectItem>
+        <SelectItem value="WATCHED">Watched</SelectItem>
       </SelectContent>
     </Select>
   );
