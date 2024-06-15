@@ -1,4 +1,3 @@
-import { MovieStatus } from "@prisma/client";
 import { ActionFunctionArgs, json, type MetaFunction } from "@remix-run/node";
 import { useFetcher, useLoaderData } from "@remix-run/react";
 import { ColumnDef } from "@tanstack/react-table";
@@ -21,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
+import { MovieStatus, MovieStatusType } from "~/lib/status";
 import { changeMovieStatus, fetchUpcomingMovies } from "~/models/movie.server";
 
 export const meta: MetaFunction = () => {
@@ -101,7 +101,7 @@ export type Movies = {
     name: string;
   };
   selectedBy: string;
-  status: MovieStatus;
+  status: MovieStatusType;
 };
 
 export const columns: ColumnDef<Movies>[] = [
@@ -191,7 +191,7 @@ export const columns: ColumnDef<Movies>[] = [
 
 interface SelectMovieStatusProps {
   movieId: string;
-  movieStatus: MovieStatus;
+  movieStatus: MovieStatusType;
 }
 
 function SelectMovieStatus({ movieStatus, movieId }: SelectMovieStatusProps) {
@@ -199,7 +199,7 @@ function SelectMovieStatus({ movieStatus, movieId }: SelectMovieStatusProps) {
 
   return (
     <Select
-      defaultValue={movieStatus}
+      value={movieStatus}
       onValueChange={(value) => {
         fetcher.submit(
           {

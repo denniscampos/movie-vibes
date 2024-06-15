@@ -13,7 +13,6 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
 import { changeMovieStatus, fetchMovies } from "~/models/movie.server";
-import { MovieStatus } from "@prisma/client";
 import { ActionFunctionArgs } from "@remix-run/node";
 import {
   Select,
@@ -22,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
+import { MovieStatus, MovieStatusType } from "~/lib/status";
 
 export const loader = async () => {
   const movies = await fetchMovies();
@@ -67,7 +67,7 @@ export type Movies = {
     name: string;
   };
   selectedBy: string;
-  status: MovieStatus;
+  status: MovieStatusType;
 };
 
 export const columns: ColumnDef<Movies>[] = [
@@ -164,7 +164,7 @@ export const columns: ColumnDef<Movies>[] = [
 
 interface SelectMovieStatusProps {
   movieId: string;
-  movieStatus: MovieStatus;
+  movieStatus: MovieStatusType;
 }
 
 function SelectMovieStatus({ movieStatus, movieId }: SelectMovieStatusProps) {
@@ -172,7 +172,7 @@ function SelectMovieStatus({ movieStatus, movieId }: SelectMovieStatusProps) {
 
   return (
     <Select
-      defaultValue={movieStatus}
+      value={movieStatus}
       onValueChange={(value) => {
         fetcher.submit(
           {

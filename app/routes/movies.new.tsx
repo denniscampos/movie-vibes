@@ -1,5 +1,4 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { MovieStatus } from "@prisma/client";
 import { ActionFunctionArgs, redirect } from "@remix-run/node";
 import { Form, json, useNavigation } from "@remix-run/react";
 import { Loader2 } from "lucide-react";
@@ -23,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
+import { MovieStatus } from "~/lib/status";
 import { createMovie } from "~/models/movie.server";
 
 const createMovieSchema = z.object({
@@ -76,7 +76,7 @@ export default function MoviesCreatePage() {
       releaseDate: "",
       selectedBy: "",
       categoryName: "",
-      status: "NOT_WATCHED",
+      status: MovieStatus.NOT_WATCHED,
     },
   });
 
