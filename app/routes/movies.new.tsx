@@ -38,7 +38,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     categoryName,
   });
 
-  return redirect(`/`);
+  return redirect(`/movies`);
 };
 
 export default function MoviesCreatePage() {

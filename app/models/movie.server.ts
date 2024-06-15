@@ -1,7 +1,42 @@
 import { db } from "~/db.server";
 
 export const fetchMovies = async () => {
-  return db.movie.findMany();
+  const movie = await db.movie.findMany({
+    select: {
+      id: true,
+      movieName: true,
+      releaseDate: true,
+      selectedBy: true,
+      category: {
+        select: {
+          name: true,
+        },
+      },
+    },
+  });
+
+  return movie;
+};
+
+export const fetchUpcomingMovies = async () => {
+  const upcomingMovies = await db.movie.findMany({
+    where: {
+      watched: true,
+    },
+    select: {
+      id: true,
+      movieName: true,
+      releaseDate: true,
+      selectedBy: true,
+      category: {
+        select: {
+          name: true,
+        },
+      },
+    },
+  });
+
+  return upcomingMovies;
 };
 
 export const createMovie = async ({

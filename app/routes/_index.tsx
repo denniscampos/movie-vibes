@@ -1,8 +1,20 @@
 import { json, type MetaFunction } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
+import { ColumnDef } from "@tanstack/react-table";
+import { ArrowUpDown, MoreHorizontal } from "lucide-react";
 import { useState } from "react";
-import { Movies, columns } from "~/components/Columns";
 import { DataTable } from "~/components/DataTable";
+import { Button } from "~/components/ui/button";
+import { Checkbox } from "~/components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu";
+import { fetchUpcomingMovies } from "~/models/movie.server";
 
 export const meta: MetaFunction = () => {
   return [
@@ -14,55 +26,9 @@ export const meta: MetaFunction = () => {
 const items = ["dnbull", "Lumster", "mon-ster", "Shway", "shwaj"];
 
 export const loader = async () => {
-  async function getData(): Promise<Movies[]> {
-    // Fetch data from your API here.
-    return [
-      {
-        id: "1",
-        movieName: "Dead Poets Society",
-        year: 1989,
-        category: "Robin Williams",
-        selectedBy: "Bob Bobber",
-      },
-      {
-        id: "2",
-        movieName: "The Lion King",
-        year: 1994,
-        category: "Disney",
-        selectedBy: "Bobby Boberson",
-      },
-      {
-        id: "3",
-        movieName: "The Matrix",
-        year: 1999,
-        category: "Sci-Fi",
-        selectedBy: "bobbster of bobs",
-      },
-      {
-        id: "4",
-        movieName: "Forrest Gump",
-        year: 1994,
-        category: "Drama",
-        selectedBy: "Bob hates bob",
-      },
-      {
-        id: "5",
-        movieName: "Good Will Hunting",
-        year: 1997,
-        category: "Robin Williams",
-        selectedBy: "Bobin Billiams",
-      },
-      {
-        id: "6",
-        movieName: "Jurassic Park",
-        year: 1993,
-        category: "Adventure",
-        selectedBy: "Bobrassic Bark",
-      },
-    ];
-  }
+  const upcomingMovies = await fetchUpcomingMovies();
 
-  return json(await getData());
+  return json(upcomingMovies);
 };
 
 export default function Index() {
@@ -75,9 +41,8 @@ export default function Index() {
   };
 
   return (
-    <div>
-      <h2>Movie Vibes</h2>
-
+    <div className="py-10">
+      <h2 className="text-3xl font-semibold">Upcoming Movies</h2>
       <DataTable columns={columns} data={loaderData} />
 
       <div>
@@ -87,3 +52,91 @@ export default function Index() {
     </div>
   );
 }
+
+export type Movies = {
+  id: string;
+  movieName: string;
+  releaseDate: string;
+  category: {
+    name: string;
+  };
+  selectedBy: string;
+};
+
+export const columns: ColumnDef<Movies>[] = [
+  {
+    id: "select",
+    header: ({ table }) => (
+      <Checkbox
+        checked={
+          table.getIsAllPageRowsSelected() ||
+          (table.getIsSomePageRowsSelected() && "indeterminate")
+        }
+        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+        aria-label="Select all"
+      />
+    ),
+    cell: ({ row }) => (
+      <Checkbox
+        checked={row.getIsSelected()}
+        onCheckedChange={(value) => row.toggleSelected(!!value)}
+        aria-label="Select row"
+      />
+    ),
+    enableSorting: false,
+    enableHiding: false,
+  },
+  {
+    accessorKey: "movieName",
+    header: "Movie Name",
+  },
+  {
+    accessorKey: "releaseDate",
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Release Date
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      );
+    },
+  },
+
+  {
+    accessorKey: "category.name",
+    header: () => <div>Category</div>,
+  },
+  {
+    accessorKey: "selectedBy",
+    header: "Selected By",
+  },
+  {
+    id: "actions",
+    cell: ({ row }) => {
+      const payment = row.original;
+
+      return (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="h-8 w-8 p-0">
+              <span className="sr-only">Open menu</span>
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            <DropdownMenuItem onClick={() => navigator.clipboard.writeText(payment.id)}>
+              Copy payment ID
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem>View customer</DropdownMenuItem>
+            <DropdownMenuItem>View payment details</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      );
+    },
+  },
+];
