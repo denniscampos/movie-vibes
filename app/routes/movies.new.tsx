@@ -81,74 +81,78 @@ export default function MoviesCreatePage() {
   });
 
   return (
-    <Card className="w-[350px] mx-auto">
-      <CardHeader>
-        <CardTitle>Add a Movie</CardTitle>
-        <CardDescription>
-          Add a movie to keep track of our movie watching.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Form method="POST" onSubmit={handleSubmit}>
-          <div className="space-y-2">
-            <Label htmlFor="movieName">Movie Name</Label>
-            <Input
-              {...register("movieName")}
-              id="movieName"
-              name="movieName"
-              type="text"
-            />
-            <p className="text-red-500">{errors.movieName && errors.movieName.message}</p>
-          </div>
+    <div className="py-10">
+      <Card className="w-[350px] mx-auto">
+        <CardHeader>
+          <CardTitle>Add a Movie</CardTitle>
+          <CardDescription>
+            Add a movie to keep track of our movie watching.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Form method="POST" onSubmit={handleSubmit}>
+            <div className="space-y-2">
+              <Label htmlFor="movieName">Movie Name</Label>
+              <Input
+                {...register("movieName")}
+                id="movieName"
+                name="movieName"
+                type="text"
+              />
+              <p className="text-red-500">
+                {errors.movieName && errors.movieName.message}
+              </p>
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="releaseDate">Release Date</Label>
-            <Input
-              {...register("releaseDate")}
-              id="releaseDate"
-              name="releaseDate"
-              type="text"
-            />
-            <p className="text-red-500">
-              {errors.releaseDate && errors.releaseDate.message}
-            </p>
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="releaseDate">Release Date</Label>
+              <Input
+                {...register("releaseDate")}
+                id="releaseDate"
+                name="releaseDate"
+                type="text"
+              />
+              <p className="text-red-500">
+                {errors.releaseDate && errors.releaseDate.message}
+              </p>
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="categoryName">Category</Label>
-            <Input
-              {...register("categoryName")}
-              id="categoryName"
-              name="categoryName"
-              type="text"
-            />
-            <p className="text-red-500">
-              {errors.categoryName && errors.categoryName.message}
-            </p>
+            <div className="space-y-2">
+              <Label htmlFor="categoryName">Category</Label>
+              <Input
+                {...register("categoryName")}
+                id="categoryName"
+                name="categoryName"
+                type="text"
+              />
+              <p className="text-red-500">
+                {errors.categoryName && errors.categoryName.message}
+              </p>
 
-            <Label htmlFor="selectedBy">Selected By</Label>
-            <Input
-              {...register("selectedBy")}
-              id="selectedBy"
-              name="selectedBy"
-              type="text"
-            />
-            <p className="text-red-500">
-              {errors.selectedBy && errors.selectedBy.message}
-            </p>
-          </div>
+              <Label htmlFor="selectedBy">Selected By</Label>
+              <Input
+                {...register("selectedBy")}
+                id="selectedBy"
+                name="selectedBy"
+                type="text"
+              />
+              <p className="text-red-500">
+                {errors.selectedBy && errors.selectedBy.message}
+              </p>
+            </div>
 
-          <div>
-            <SelectMovieStatus setValue={setValue} />
-            <p className="text-red-500">{errors.status && errors.status.message}</p>
-          </div>
+            <div>
+              <SelectMovieStatus setValue={setValue} />
+              <p className="text-red-500">{errors.status && errors.status.message}</p>
+            </div>
 
-          <Button className="mt-2" type="submit" disabled={loading}>
-            {loading ? <Loader2 className="animate-spin" /> : "Add Movie"}
-          </Button>
-        </Form>
-      </CardContent>
-    </Card>
+            <Button className="mt-2" type="submit" disabled={loading}>
+              {loading ? <Loader2 className="animate-spin" /> : "Add Movie"}
+            </Button>
+          </Form>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 

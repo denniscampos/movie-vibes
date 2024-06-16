@@ -43,11 +43,11 @@ export default function MoviesPage() {
   const loaderData = useLoaderData<typeof loader>();
 
   return (
-    <div>
+    <div className="py-10">
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-semibold">Movie Database</h2>
-        <Link className={buttonVariants({ variant: "link" })} to="/movies/new">
-          Add New Movie
+        <Link className={buttonVariants()} to="/movies/new">
+          + Add New Movie
         </Link>
       </div>
       <DataTable data={loaderData} columns={columns} />

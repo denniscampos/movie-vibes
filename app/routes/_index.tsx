@@ -1,5 +1,5 @@
 import { ActionFunctionArgs, json, type MetaFunction } from "@remix-run/node";
-import { useActionData, useLoaderData } from "@remix-run/react";
+import { redirect, useActionData, useLoaderData } from "@remix-run/react";
 import { ColumnDef } from "@tanstack/react-table";
 import { ArrowUpDown, MoreHorizontal } from "lucide-react";
 import { useState } from "react";
@@ -19,7 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
 import { MovieStatus } from "~/lib/status";
-import { changeMovieStatus, fetchUpcomingMovies } from "~/models/movie.server";
+import { changeMovieStatus, fetchUpcomingMovies, saveToDB } from "~/models/movie.server";
 
 export const meta: MetaFunction = () => {
   return [
@@ -44,10 +44,18 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const action = body.get("_action");
   const search = body.get("searchMovies");
 
+  const movieTitle = body.get("movieTitle") as string;
+  const movieReleaseDate = body.get("movieReleaseDate") as string;
+
   if (action === "movieStatus") {
     await changeMovieStatus({ id: movieId, status: movieStatus });
 
     return json({ message: "Movie status updated" });
+  }
+
+  if (action === "create") {
+    await saveToDB({ movieName: movieTitle, releaseDate: movieReleaseDate });
+    return redirect("/movies");
   }
 
   const searchResults = await searchMovie(search as string);

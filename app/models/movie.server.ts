@@ -23,7 +23,7 @@ export const fetchMovies = async () => {
 export const fetchUpcomingMovies = async () => {
   const upcomingMovies = await db.movie.findMany({
     where: {
-      status: "UPCOMING",
+      status: MovieStatus.UPCOMING,
     },
     select: {
       id: true,
@@ -83,6 +83,30 @@ export const changeMovieStatus = async ({
     },
     data: {
       status,
+    },
+  });
+};
+
+export const saveToDB = async ({
+  movieName,
+  releaseDate,
+}: {
+  movieName: string;
+  releaseDate: string;
+}) => {
+  const getYear = releaseDate.split("-")[0];
+  return db.movie.create({
+    data: {
+      movieName,
+      releaseDate: getYear,
+      // everything below will be empty since the goal is to update the movie later
+      category: {
+        create: {
+          name: "",
+        },
+      },
+      status: MovieStatus.NOT_WATCHED,
+      selectedBy: "",
     },
   });
 };

@@ -1,3 +1,6 @@
+import { Form } from "@remix-run/react";
+import { Button } from "./ui/button";
+
 interface MovieListProps {
   id: number;
   title: string;
@@ -36,10 +39,26 @@ export function MovieList({ movies }: { movies: MovieListProps[] }) {
               <div className="p-4">
                 <h3 className="text-lg font-semibold text-gray-800">{movie.title}</h3>
                 <p className="text-gray-600">{movie.releaseDate}</p>
+                <div className="pt-3">
+                  <SaveMovieButton movie={movie} />
+                </div>
               </div>
             </div>
           )
         )}
     </div>
+  );
+}
+
+function SaveMovieButton({ movie }: { movie: MovieListProps }) {
+  return (
+    <Form method="POST">
+      <input type="hidden" name="movieTitle" value={movie.title} />
+      <input type="hidden" name="movieReleaseDate" value={movie.releaseDate} />
+
+      <Button type="submit" name="_action" value="create">
+        Save Movie to DB
+      </Button>
+    </Form>
   );
 }
