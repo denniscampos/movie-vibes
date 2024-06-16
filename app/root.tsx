@@ -16,8 +16,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body>
+        <Navbar />
         <div className="max-w-7xl mx-auto px-4">
-          <Navbar />
           {children}
           <ScrollRestoration />
           <Scripts />

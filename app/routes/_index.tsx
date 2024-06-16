@@ -1,10 +1,13 @@
 import { ActionFunctionArgs, json, type MetaFunction } from "@remix-run/node";
-import { useLoaderData } from "@remix-run/react";
+import { useActionData, useLoaderData } from "@remix-run/react";
 import { ColumnDef } from "@tanstack/react-table";
 import { ArrowUpDown, MoreHorizontal } from "lucide-react";
 import { useState } from "react";
+import { searchMovie } from "services/tmdb";
 import { Movies } from "types/movie";
 import { DataTable } from "~/components/DataTable";
+import { MovieList } from "~/components/MovieList";
+import { SearchMovies } from "~/components/SearchMovies";
 import { SelectMovieStatus } from "~/components/SelectMovieStatus";
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
@@ -39,16 +42,23 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const movieStatus = body.get("movieStatus") as MovieStatus;
 
   const action = body.get("_action");
+  const search = body.get("searchMovies");
 
   if (action === "movieStatus") {
     await changeMovieStatus({ id: movieId, status: movieStatus });
 
     return json({ message: "Movie status updated" });
   }
+
+  const searchResults = await searchMovie(search as string);
+
+  return json(searchResults);
 };
 
 export default function Index() {
   const loaderData = useLoaderData<typeof loader>();
+  const actionData = useActionData<typeof action>();
+
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
   const [isSpinning, setIsSpinning] = useState(false);
 
@@ -58,12 +68,16 @@ export default function Index() {
       const randomIndex = Math.floor(Math.random() * items.length);
       setSelectedItem(items[randomIndex]);
       setIsSpinning(false);
-    }, 3000); // Spin for 3 seconds
+    }, 3000);
   };
 
   return (
     <div className="py-10">
+      <SearchMovies />
+      <MovieList movies={actionData} />
+
       <h2 className="text-3xl font-semibold">Upcoming Movies</h2>
+
       <DataTable columns={columns} data={loaderData} />
 
       <div className="mt-10">

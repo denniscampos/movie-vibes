@@ -3,7 +3,7 @@ import { buttonVariants } from "./ui/button";
 
 export function Navbar() {
   return (
-    <header className="flex py-4 items-center justify-between">
+    <header className="flex py-4 items-center justify-between shadow-md pl-4">
       <Link className="font-bold" to="/">
         Movie Vibes
       </Link>

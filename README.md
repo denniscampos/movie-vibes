@@ -13,10 +13,13 @@ Install dependencies
 npm install
 ```
 
-Run the local DB and add the `DATABASE_URL` by creating an `.env` file
+Create an `.env` file and add the following environment variables.
 
 ```typescript
 DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/movie_vibes?schema=public";
+TMDB_API_URL = "https://api.themoviedb.org/3";
+TMDB_API_TOKEN = "";
+TMDB_API_IMAGE_URL = "https://image.tmdb.org/t/p/w1280";
 ```
 
 Generate and migrate your DB
