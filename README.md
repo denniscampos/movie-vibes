@@ -1,40 +1,32 @@
-# Welcome to Remix!
+# MOVIE VIBES
 
-- 📖 [Remix docs](https://remix.run/docs)
+## Tech Stack
 
-## Development
+- Remix
+- Prisma / Postgres
 
-Run the dev server:
+## Getting Stared
 
-```shellscript
+Install dependencies
+
+```bash
+npm install
+```
+
+Run the local DB and add the `DATABASE_URL` by creating an `.env` file
+
+```typescript
+DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/movie_vibes?schema=public";
+```
+
+Generate and migrate your DB
+
+```bash
+npx prisma migrate dev && npx prisma generate
+```
+
+Run the server
+
+```
 npm run dev
 ```
-
-## Deployment
-
-First, build your app for production:
-
-```sh
-npm run build
-```
-
-Then run the app in production mode:
-
-```sh
-npm start
-```
-
-Now you'll need to pick a host to deploy it to.
-
-### DIY
-
-If you're familiar with deploying Node applications, the built-in Remix app server is production-ready.
-
-Make sure to deploy the output of `npm run build`
-
-- `build/server`
-- `build/client`
-
-## Styling
-
-This template comes with [Tailwind CSS](https://tailwindcss.com/) already configured for a simple default starting experience. You can use whatever css framework you prefer. See the [Vite docs on css](https://vitejs.dev/guide/features.html#css) for more information.

@@ -159,7 +159,7 @@ function SelectMovieStatus({ setValue }: { setValue: FieldValues["setValue"] }) 
         <SelectValue placeholder="Movie Status" />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="NOT WATCHED">Not Watched</SelectItem>
+        <SelectItem value="NOT_WATCHED">Not Watched</SelectItem>
         <SelectItem value="UPCOMING">Upcoming</SelectItem>
         <SelectItem value="WATCHED">Watched</SelectItem>
       </SelectContent>
