@@ -1,4 +1,4 @@
-import { Link, json, useFetcher, useLoaderData } from "@remix-run/react";
+import { Link, json, useLoaderData } from "@remix-run/react";
 import { DataTable } from "~/components/DataTable";
 
 import { ColumnDef } from "@tanstack/react-table";
@@ -14,14 +14,10 @@ import {
 } from "~/components/ui/dropdown-menu";
 import { changeMovieStatus, fetchMovies } from "~/models/movie.server";
 import { ActionFunctionArgs } from "@remix-run/node";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
-import { MovieStatus, MovieStatusType } from "~/lib/status";
+
+import { MovieStatus } from "~/lib/status";
+import { Movies } from "types/movie";
+import { SelectMovieStatus } from "~/components/SelectMovieStatus";
 
 export const loader = async () => {
   const movies = await fetchMovies();
@@ -58,17 +54,6 @@ export default function MoviesPage() {
     </div>
   );
 }
-
-export type Movies = {
-  id: string;
-  movieName: string;
-  releaseDate: string;
-  category: {
-    name: string;
-  };
-  selectedBy: string;
-  status: MovieStatusType;
-};
 
 export const columns: ColumnDef<Movies>[] = [
   {
@@ -161,39 +146,3 @@ export const columns: ColumnDef<Movies>[] = [
     },
   },
 ];
-
-interface SelectMovieStatusProps {
-  movieId: string;
-  movieStatus: MovieStatusType;
-}
-
-function SelectMovieStatus({ movieStatus, movieId }: SelectMovieStatusProps) {
-  const fetcher = useFetcher();
-
-  return (
-    <Select
-      value={movieStatus}
-      onValueChange={(value) => {
-        fetcher.submit(
-          {
-            movieId,
-            movieStatus: value,
-            _action: "movieStatus",
-          },
-          {
-            method: "POST",
-          }
-        );
-      }}
-    >
-      <SelectTrigger className="w-[180px]">
-        <SelectValue placeholder="Movie Status" />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value={MovieStatus.NOT_WATCHED}>Not Watched</SelectItem>
-        <SelectItem value={MovieStatus.UPCOMING}>Upcoming</SelectItem>
-        <SelectItem value={MovieStatus.WATCHED}>Watched</SelectItem>
-      </SelectContent>
-    </Select>
-  );
-}

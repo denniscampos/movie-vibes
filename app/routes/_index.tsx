@@ -1,9 +1,11 @@
 import { ActionFunctionArgs, json, type MetaFunction } from "@remix-run/node";
-import { useFetcher, useLoaderData } from "@remix-run/react";
+import { useLoaderData } from "@remix-run/react";
 import { ColumnDef } from "@tanstack/react-table";
 import { ArrowUpDown, MoreHorizontal } from "lucide-react";
 import { useState } from "react";
+import { Movies } from "types/movie";
 import { DataTable } from "~/components/DataTable";
+import { SelectMovieStatus } from "~/components/SelectMovieStatus";
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import {
@@ -13,14 +15,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
-import { MovieStatus, MovieStatusType } from "~/lib/status";
+import { MovieStatus } from "~/lib/status";
 import { changeMovieStatus, fetchUpcomingMovies } from "~/models/movie.server";
 
 export const meta: MetaFunction = () => {
@@ -92,17 +87,6 @@ export default function Index() {
     </div>
   );
 }
-
-export type Movies = {
-  id: string;
-  movieName: string;
-  releaseDate: string;
-  category: {
-    name: string;
-  };
-  selectedBy: string;
-  status: MovieStatusType;
-};
 
 export const columns: ColumnDef<Movies>[] = [
   {
@@ -188,39 +172,3 @@ export const columns: ColumnDef<Movies>[] = [
     },
   },
 ];
-
-interface SelectMovieStatusProps {
-  movieId: string;
-  movieStatus: MovieStatusType;
-}
-
-function SelectMovieStatus({ movieStatus, movieId }: SelectMovieStatusProps) {
-  const fetcher = useFetcher();
-
-  return (
-    <Select
-      value={movieStatus}
-      onValueChange={(value) => {
-        fetcher.submit(
-          {
-            movieId,
-            movieStatus: value,
-            _action: "movieStatus",
-          },
-          {
-            method: "POST",
-          }
-        );
-      }}
-    >
-      <SelectTrigger className="w-[180px]">
-        <SelectValue placeholder="Movie Status" />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value={MovieStatus.NOT_WATCHED}>Not Watched</SelectItem>
-        <SelectItem value={MovieStatus.UPCOMING}>Upcoming</SelectItem>
-        <SelectItem value={MovieStatus.WATCHED}>Watched</SelectItem>
-      </SelectContent>
-    </Select>
-  );
-}
