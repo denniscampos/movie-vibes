@@ -1,10 +1,23 @@
 import { Link, json, redirect, useLoaderData } from "@remix-run/react";
 import { DataTable } from "~/components/DataTable";
 import { buttonVariants } from "~/components/ui/button";
-import { changeMovieStatus, fetchMovies, removeMovie } from "~/models/movie.server";
+import {
+  changeMovieStatus,
+  fetchMovies,
+  removeMovie,
+  updateMovie,
+} from "~/models/movie.server";
 import { ActionFunctionArgs } from "@remix-run/node";
 import { MovieStatus } from "~/lib/status";
 import { columns } from "~/components/Columns";
+import { z } from "zod";
+
+const updateMovieSchema = z.object({
+  movieName: z.string().min(1, { message: "Movie name is required" }),
+  releaseDate: z.string().min(1, { message: "Release date is required" }),
+  selectedBy: z.string().min(1, { message: "Selected by is required" }),
+  categoryName: z.string().min(1, { message: "Category name is required" }),
+});
 
 export const loader = async () => {
   const movies = await fetchMovies();
@@ -23,6 +36,28 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     await changeMovieStatus({ id: movieId, status: movieStatus });
 
     return json({ message: "Movie status updated" });
+  }
+
+  if (action === "update") {
+    const movieId = body.get("movieId") as string;
+    const movieName = body.get("movieName") as string;
+    const releaseDate = body.get("releaseDate") as string;
+    const selectedBy = body.get("selectedBy") as string;
+    const categoryName = body.get("categoryName") as string;
+
+    try {
+      const parseData = updateMovieSchema.parse({
+        movieName,
+        releaseDate,
+        selectedBy,
+        categoryName,
+      });
+
+      const updatedMovie = await updateMovie({ ...parseData, movieId });
+      return json({ updatedMovie });
+    } catch (error) {
+      return json({ error });
+    }
   }
 
   if (action === "destroy") {
