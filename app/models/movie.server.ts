@@ -110,3 +110,41 @@ export const saveToDB = async ({
     },
   });
 };
+
+export const updateMovie = async ({
+  movieId,
+  movieName,
+  releaseDate,
+  selectedBy,
+  categoryName,
+}: {
+  movieId: string;
+  movieName: string;
+  releaseDate: string;
+  selectedBy: string;
+  categoryName: string;
+}) => {
+  return await db.movie.update({
+    where: {
+      id: movieId,
+    },
+    data: {
+      movieName,
+      releaseDate,
+      selectedBy,
+      category: {
+        update: {
+          name: categoryName,
+        },
+      },
+    },
+  });
+};
+
+export const removeMovie = async (movieId: string) => {
+  return db.movie.delete({
+    where: {
+      id: movieId,
+    },
+  });
+};
