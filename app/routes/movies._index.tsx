@@ -1,23 +1,10 @@
-import { Link, json, useLoaderData } from "@remix-run/react";
+import { Link, json, redirect, useLoaderData } from "@remix-run/react";
 import { DataTable } from "~/components/DataTable";
-
-import { ColumnDef } from "@tanstack/react-table";
-import { MoreHorizontal, ArrowUpDown } from "lucide-react";
-import { Button, buttonVariants } from "~/components/ui/button";
-import { Checkbox } from "~/components/ui/checkbox";
-
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from "~/components/ui/dropdown-menu";
-import { changeMovieStatus, fetchMovies } from "~/models/movie.server";
+import { buttonVariants } from "~/components/ui/button";
+import { changeMovieStatus, fetchMovies, removeMovie } from "~/models/movie.server";
 import { ActionFunctionArgs } from "@remix-run/node";
-
 import { MovieStatus } from "~/lib/status";
-import { Movies } from "types/movie";
-import { SelectMovieStatus } from "~/components/SelectMovieStatus";
+import { columns } from "~/components/Columns";
 
 export const loader = async () => {
   const movies = await fetchMovies();
@@ -37,6 +24,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
     return json({ message: "Movie status updated" });
   }
+
+  if (action === "destroy") {
+    const movieId = body.get("movieId") as string;
+    await removeMovie(movieId);
+
+    return redirect("/movies");
+  }
+
+  return null;
 };
 
 export default function MoviesPage() {
@@ -54,95 +50,3 @@ export default function MoviesPage() {
     </div>
   );
 }
-
-export const columns: ColumnDef<Movies>[] = [
-  {
-    id: "select",
-    header: ({ table }) => (
-      <Checkbox
-        checked={
-          table.getIsAllPageRowsSelected() ||
-          (table.getIsSomePageRowsSelected() && "indeterminate")
-        }
-        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        aria-label="Select all"
-      />
-    ),
-    cell: ({ row }) => (
-      <Checkbox
-        checked={row.getIsSelected()}
-        onCheckedChange={(value) => row.toggleSelected(!!value)}
-        aria-label="Select row"
-      />
-    ),
-    enableSorting: false,
-    enableHiding: false,
-  },
-  {
-    accessorKey: "movieName",
-    header: "Movie Name",
-  },
-  {
-    accessorKey: "releaseDate",
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Release Date
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      );
-    },
-  },
-
-  {
-    accessorKey: "category.name",
-    header: () => <div>Category</div>,
-  },
-  {
-    accessorKey: "selectedBy",
-    header: "Selected By",
-  },
-  {
-    accessorKey: "status",
-    header: "Status",
-    cell: ({ row }) => {
-      const movieId = row.original.id;
-      const movieStatus = row.original.status;
-
-      return <SelectMovieStatus movieStatus={movieStatus} movieId={movieId} />;
-    },
-  },
-  {
-    id: "actions",
-    cell: ({ row }) => {
-      const movieId = row.original.id;
-
-      return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <Link
-              className="hover:bg-slate-100 relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
-              to={`/movies/${movieId}/update`}
-            >
-              Edit
-            </Link>
-
-            {/* <DropdownMenuItem onClick={() => navigator.clipboard.writeText("")}>
-              Remove
-            </DropdownMenuItem> */}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      );
-    },
-  },
-];

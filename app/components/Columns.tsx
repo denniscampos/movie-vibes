@@ -1,17 +1,10 @@
 import { ColumnDef } from "@tanstack/react-table";
-import { MoreHorizontal, ArrowUpDown } from "lucide-react";
+import { ArrowUpDown } from "lucide-react";
 import { Movies } from "types/movie";
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
-
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "~/components/ui/dropdown-menu";
+import { SelectMovieStatus } from "./SelectMovieStatus";
+import { TableDropdown } from "./TableDropdown";
 
 export const columns: ColumnDef<Movies>[] = [
   {
@@ -41,14 +34,14 @@ export const columns: ColumnDef<Movies>[] = [
     header: "Movie Name",
   },
   {
-    accessorKey: "year",
+    accessorKey: "releaseDate",
     header: ({ column }) => {
       return (
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
-          Year
+          Release Date
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       );
@@ -56,46 +49,35 @@ export const columns: ColumnDef<Movies>[] = [
   },
 
   {
-    accessorKey: "category",
+    accessorKey: "category.name",
     header: () => <div>Category</div>,
-    // cell: ({ row }) => {
-    //   const amount = parseFloat(row.getValue("amount"));
-    //   const formatted = new Intl.NumberFormat("en-US", {
-    //     style: "currency",
-    //     currency: "USD",
-    //   }).format(amount);
-
-    //   return <div className="text-right font-medium">{formatted}</div>;
-    // },
   },
   {
     accessorKey: "selectedBy",
     header: "Selected By",
   },
   {
+    accessorKey: "status",
+    header: "Status",
+    cell: ({ row }) => {
+      const movieId = row.original.id;
+      const movieStatus = row.original.status;
+
+      return <SelectMovieStatus movieStatus={movieStatus} movieId={movieId} />;
+    },
+  },
+  {
     id: "actions",
     cell: ({ row }) => {
-      const payment = row.original;
+      const movie = {
+        id: row.original.id,
+        movieName: row.original.movieName,
+        releaseDate: row.original.releaseDate,
+        category: row.original.category,
+        selectedBy: row.original.selectedBy,
+      };
 
-      return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem onClick={() => navigator.clipboard.writeText(payment.id)}>
-              Copy payment ID
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>View customer</DropdownMenuItem>
-            <DropdownMenuItem>View payment details</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      );
+      return <TableDropdown movie={movie} />;
     },
   },
 ];
