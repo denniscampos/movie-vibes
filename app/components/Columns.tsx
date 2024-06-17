@@ -38,6 +38,7 @@ export const columns: ColumnDef<Movies>[] = [
     header: ({ column }) => {
       return (
         <Button
+          className="p-0"
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
@@ -54,7 +55,18 @@ export const columns: ColumnDef<Movies>[] = [
   },
   {
     accessorKey: "selectedBy",
-    header: "Selected By",
+    header: ({ column }) => {
+      return (
+        <Button
+          className="p-0"
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Selected By
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      );
+    },
   },
   {
     accessorKey: "status",

@@ -1,8 +1,17 @@
 import { MovieStatus } from "@prisma/client";
 import { db } from "~/db.server";
 
-export const fetchMovies = async () => {
+export const fetchMovies = async (searchQuery?: string) => {
   const movie = await db.movie.findMany({
+    where: {
+      movieName: {
+        contains: searchQuery,
+        mode: "insensitive",
+      },
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
     select: {
       id: true,
       movieName: true,
