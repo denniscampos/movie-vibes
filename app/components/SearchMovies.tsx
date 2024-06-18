@@ -1,15 +1,15 @@
-import { Form, useNavigation } from "@remix-run/react";
+import { useFetcher } from "@remix-run/react";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Loader2 } from "lucide-react";
 
 export function SearchMovies() {
-  const navigation = useNavigation();
-  const loading = navigation.state === "loading";
+  const fetcher = useFetcher();
+  const loading = fetcher.state !== "idle";
 
   return (
     <div className="mx-auto w-[500px] mb-5">
-      <Form className="flex gap-3" method="POST">
+      <fetcher.Form className="flex gap-3" method="POST">
         <Input
           // id="searchMovies"
           name="searchMovies"
@@ -20,7 +20,7 @@ export function SearchMovies() {
         <Button className="sr-only" type="submit" name="_action" value="search">
           Submit
         </Button>
-      </Form>
+      </fetcher.Form>
     </div>
   );
 }
