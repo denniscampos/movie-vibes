@@ -86,6 +86,10 @@ export const changeMovieStatus = async ({
   id: string;
   status: MovieStatus;
 }) => {
+  if (!id) {
+    throw new Error("Movie ID is required");
+  }
+
   return db.movie.update({
     where: {
       id,
@@ -133,6 +137,10 @@ export const updateMovie = async ({
   selectedBy: string;
   categoryName: string;
 }) => {
+  if (!movieId) {
+    throw new Error("Movie ID is required");
+  }
+
   return await db.movie.update({
     where: {
       id: movieId,
@@ -151,6 +159,10 @@ export const updateMovie = async ({
 };
 
 export const removeMovie = async (movieId: string) => {
+  if (!movieId) {
+    throw new Error("Movie ID is required");
+  }
+
   return db.movie.delete({
     where: {
       id: movieId,
