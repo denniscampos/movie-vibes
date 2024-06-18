@@ -1,4 +1,4 @@
-import { Link, json, redirect, useLoaderData } from "@remix-run/react";
+import { Link, json, useLoaderData } from "@remix-run/react";
 import { DataTable } from "~/components/DataTable";
 import { buttonVariants } from "~/components/ui/button";
 import {
@@ -64,10 +64,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const movieId = body.get("movieId") as string;
     await removeMovie(movieId);
 
-    return redirect("/movies");
+    return json({ success: true });
   }
-
-  return null;
 };
 
 export default function MoviesPage() {

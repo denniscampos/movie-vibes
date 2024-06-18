@@ -18,8 +18,10 @@ import {
   DialogTitle,
 } from "./ui/dialog";
 import { Label } from "./ui/label";
-import { useFetcher, Form } from "@remix-run/react";
+import { useFetcher, Form, useActionData } from "@remix-run/react";
 import { Input } from "./ui/input";
+import { action as movieAction } from "~/routes/movies._index";
+import { action } from "~/routes/_index";
 
 export function TableDropdown({ movie }: { movie: Omit<Movies, "status"> }) {
   const [showEditDialog, setShowEditDialog] = useState(false);
@@ -161,6 +163,16 @@ function RemoveDialog({
   setShowRemoveDialog: (value: boolean) => void;
   movie: Pick<Movies, "id">;
 }) {
+  const actionMovieData = useActionData<typeof movieAction>();
+  const actionData = useActionData<typeof action>();
+
+  useEffect(() => {
+    // @ts-expect-error cus ts is dumb sometimes
+    if (actionMovieData?.success || actionData?.success) {
+      setShowRemoveDialog(false);
+    }
+  }, [actionData, actionMovieData, setShowRemoveDialog]);
+
   return (
     <Dialog open={showRemoveDialog} onOpenChange={setShowRemoveDialog}>
       <DialogContent className="sm:max-w-[425px]">

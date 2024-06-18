@@ -1,5 +1,6 @@
-import { Form } from "@remix-run/react";
+import { Form, useNavigation } from "@remix-run/react";
 import { Button } from "./ui/button";
+import { Loader2 } from "lucide-react";
 
 interface MovieListProps {
   id: number;
@@ -51,13 +52,16 @@ export function MovieList({ movies }: { movies: MovieListProps[] }) {
 }
 
 function SaveMovieButton({ movie }: { movie: MovieListProps }) {
+  const navigation = useNavigation();
+  const loading = navigation.state === "loading";
+
   return (
     <Form method="POST">
       <input type="hidden" name="movieTitle" value={movie.title} />
       <input type="hidden" name="movieReleaseDate" value={movie.releaseDate} />
 
       <Button type="submit" name="_action" value="create">
-        Save Movie to DB
+        {loading ? <Loader2 className="animate-spin" /> : "Save Movie to DB"}
       </Button>
     </Form>
   );
