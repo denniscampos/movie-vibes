@@ -27,12 +27,12 @@ export const loader = async () => {
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   const body = await request.formData();
-  const movieId = body.get("movieId") as string;
-  const movieStatus = body.get("movieStatus") as MovieStatus;
 
   const action = body.get("_action");
 
   if (action === "movieStatus") {
+    const movieId = body.get("movieId") as string;
+    const movieStatus = body.get("movieStatus") as MovieStatus;
     await changeMovieStatus({ id: movieId, status: movieStatus });
 
     return json({ message: "Movie status updated" });

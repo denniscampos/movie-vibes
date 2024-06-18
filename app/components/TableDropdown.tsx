@@ -18,10 +18,8 @@ import {
   DialogTitle,
 } from "./ui/dialog";
 import { Label } from "./ui/label";
-import { useFetcher, Form, useActionData } from "@remix-run/react";
+import { useFetcher } from "@remix-run/react";
 import { Input } from "./ui/input";
-import { action as movieAction } from "~/routes/movies._index";
-import { action } from "~/routes/_index";
 
 export function TableDropdown({ movie }: { movie: Omit<Movies, "status"> }) {
   const [showEditDialog, setShowEditDialog] = useState(false);
@@ -70,6 +68,7 @@ export function EditDialog({
   movie: Omit<Movies, "status">;
 }) {
   const fetcher = useFetcher();
+  const isEditing = fetcher.state !== "idle";
   const data = fetcher.data;
 
   useEffect(() => {
@@ -144,8 +143,8 @@ export function EditDialog({
             </div>
           </div>
           {errors && <p className="text-red-500">Your form had an error!</p>}
-          <Button name="_action" value="update" type="submit">
-            Save changes
+          <Button disabled={isEditing} name="_action" value="update" type="submit">
+            {isEditing ? "Saving..." : "Save changes"}
           </Button>
         </fetcher.Form>
         <DialogFooter></DialogFooter>
@@ -163,15 +162,14 @@ function RemoveDialog({
   setShowRemoveDialog: (value: boolean) => void;
   movie: Pick<Movies, "id">;
 }) {
-  const actionMovieData = useActionData<typeof movieAction>();
-  const actionData = useActionData<typeof action>();
+  const fetcher = useFetcher();
+  const isDeleting = fetcher.state !== "idle";
 
   useEffect(() => {
-    // @ts-expect-error cus ts is dumb sometimes
-    if (actionMovieData?.success || actionData?.success) {
+    if (isDeleting) {
       setShowRemoveDialog(false);
     }
-  }, [actionData, actionMovieData, setShowRemoveDialog]);
+  });
 
   return (
     <Dialog open={showRemoveDialog} onOpenChange={setShowRemoveDialog}>
@@ -189,12 +187,18 @@ function RemoveDialog({
           >
             Cancel
           </Button>
-          <Form method="delete">
+          <fetcher.Form method="delete">
             <input type="hidden" name="movieId" value={movie.id} />
-            <Button type="submit" variant="destructive" name="_action" value="destroy">
-              Remove
+            <Button
+              disabled={isDeleting}
+              type="submit"
+              variant="destructive"
+              name="_action"
+              value="destroy"
+            >
+              {isDeleting ? "Removing..." : "Remove"}
             </Button>
-          </Form>
+          </fetcher.Form>
         </DialogFooter>
       </DialogContent>
     </Dialog>
