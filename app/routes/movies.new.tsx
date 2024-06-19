@@ -1,9 +1,10 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ActionFunctionArgs, redirect } from "@remix-run/node";
+import { ActionFunctionArgs, LoaderFunctionArgs, redirect } from "@remix-run/node";
 import { Form, json, useNavigation } from "@remix-run/react";
 import { Loader2 } from "lucide-react";
 import { FieldValues } from "react-hook-form";
 import { useRemixForm, getValidatedFormData } from "remix-hook-form";
+import { usernameCookie } from "utils/cookies";
 import { z } from "zod";
 import { Button } from "~/components/ui/button";
 import {
@@ -35,6 +36,17 @@ const createMovieSchema = z.object({
 
 type MovieSchema = z.infer<typeof createMovieSchema>;
 const resolver = zodResolver(createMovieSchema);
+
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const cookieHeader = request.headers.get("Cookie");
+  const userVisited = (await usernameCookie.parse(cookieHeader)) || false;
+
+  if (!userVisited) {
+    return redirect("/login");
+  }
+
+  return null;
+};
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   const { receivedValues, errors, data } = await getValidatedFormData<MovieSchema>(

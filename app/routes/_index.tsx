@@ -1,7 +1,13 @@
-import { ActionFunctionArgs, json, type MetaFunction } from "@remix-run/node";
+import {
+  ActionFunctionArgs,
+  LoaderFunctionArgs,
+  json,
+  type MetaFunction,
+} from "@remix-run/node";
 import { redirect, useActionData, useLoaderData } from "@remix-run/react";
 import { useState } from "react";
 import { searchMovie } from "services/tmdb";
+import { usernameCookie } from "utils/cookies";
 import { z } from "zod";
 import { columns } from "~/components/Columns";
 import { DataTable } from "~/components/DataTable";
@@ -33,7 +39,14 @@ const updateMovieSchema = z.object({
 
 const items = ["dnbull", "Lumster", "mon-ster", "Shway", "shwaj"];
 
-export const loader = async () => {
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const cookieHeader = request.headers.get("Cookie");
+  const userVisited = (await usernameCookie.parse(cookieHeader)) || false;
+
+  if (!userVisited) {
+    return redirect("/login");
+  }
+
   const upcomingMovies = await fetchUpcomingMovies();
 
   return json(upcomingMovies);

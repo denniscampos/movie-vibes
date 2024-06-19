@@ -1,4 +1,4 @@
-import { Link, json, useLoaderData } from "@remix-run/react";
+import { Link, json, redirect, useLoaderData } from "@remix-run/react";
 import { DataTable } from "~/components/DataTable";
 import { buttonVariants } from "~/components/ui/button";
 import {
@@ -7,10 +7,11 @@ import {
   removeMovie,
   updateMovie,
 } from "~/models/movie.server";
-import { ActionFunctionArgs } from "@remix-run/node";
+import { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { MovieStatus } from "~/lib/status";
 import { columns } from "~/components/Columns";
 import { z } from "zod";
+import { usernameCookie } from "utils/cookies";
 
 const updateMovieSchema = z.object({
   movieName: z.string().min(1, { message: "Movie name is required" }),
@@ -19,7 +20,14 @@ const updateMovieSchema = z.object({
   categoryName: z.string().min(1, { message: "Category name is required" }),
 });
 
-export const loader = async () => {
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const cookieHeader = request.headers.get("Cookie");
+  const userVisited = (await usernameCookie.parse(cookieHeader)) || false;
+
+  if (!userVisited) {
+    return redirect("/login");
+  }
+
   const movies = await fetchMovies();
 
   return json(movies);
