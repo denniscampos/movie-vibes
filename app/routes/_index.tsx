@@ -37,7 +37,7 @@ const updateMovieSchema = z.object({
   categoryName: z.string().min(1, { message: "Category name is required" }),
 });
 
-const items = ["dnbull", "Lumster", "mon-ster", "Shway", "shwaj"];
+const items = ["dnbull", "Lumster", "mon-ster", "Shway", "schwaj"];
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const cookieHeader = request.headers.get("Cookie");
