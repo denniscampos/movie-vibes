@@ -5,7 +5,7 @@ import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 
-const users = ["dnbull", "Lumster", "mon-ster", "Shway", "shwaj"];
+const users = ["dnbull", "Lumster", "mon-ster", "Shway", "schwaj"];
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const cookieHeader = request.headers.get("Cookie");
 
