@@ -1,7 +1,6 @@
 import { Form, useNavigation } from "@remix-run/react";
 import { Button } from "./ui/button";
 import { Loader2 } from "lucide-react";
-
 interface MovieListProps {
   id: number;
   title: string;
