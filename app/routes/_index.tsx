@@ -37,8 +37,6 @@ const updateMovieSchema = z.object({
   categoryName: z.string().min(1, { message: "Category name is required" }),
 });
 
-const items = ["dnbull", "Lumster", "mon-ster", "Shway", "schwaj"];
-
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const cookieHeader = request.headers.get("Cookie");
   const userVisited = (await usernameCookie.parse(cookieHeader)) || false;
@@ -114,18 +112,6 @@ export default function Index() {
   const loaderData = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
 
-  const [selectedItem, setSelectedItem] = useState<string | null>(null);
-  const [isSpinning, setIsSpinning] = useState(false);
-
-  const spin = () => {
-    setIsSpinning(true);
-    setTimeout(() => {
-      const randomIndex = Math.floor(Math.random() * items.length);
-      setSelectedItem(items[randomIndex]);
-      setIsSpinning(false);
-    }, 3000);
-  };
-
   return (
     <div className="py-10">
       <SearchMovies />
@@ -135,23 +121,46 @@ export default function Index() {
 
       <DataTable columns={columns} data={loaderData} />
 
-      <div className="mt-10">
-        <h3 className="text-2xl font-semibold mb-2">WHOSE MOVIE ARE WE PICKING?</h3>
-        <Button onClick={spin}>Spin Picker</Button>
+      <NameSpinner />
+    </div>
+  );
+}
 
-        <div className="mt-10 flex justify-center items-center">
-          {isSpinning && (
-            <div className="spinner-border animate-spin inline-block w-16 h-16 border-4 rounded-full border-t-blue-500 border-r-transparent border-b-transparent border-l-blue-500">
-              <span className="sr-only">Loading...</span>
-            </div>
-          )}
+export function NameSpinner() {
+  const loaderData = useLoaderData<typeof loader>();
+  const [selectedItem, setSelectedItem] = useState<string | null>(null);
+  const [isSpinning, setIsSpinning] = useState(false);
 
-          {!isSpinning && selectedItem && (
-            <div className="text-2xl font-bold text-green-600">
-              Selected: {selectedItem}
-            </div>
-          )}
-        </div>
+  const selectedBy = loaderData.map((movie) => movie.selectedBy);
+
+  const spin = () => {
+    if (!selectedBy.length) return;
+    setIsSpinning(true);
+    setTimeout(() => {
+      const randomIndex = Math.floor(Math.random() * selectedBy.length);
+
+      setSelectedItem(selectedBy[randomIndex]);
+      setIsSpinning(false);
+    }, 3000);
+  };
+
+  return (
+    <div className="mt-10">
+      <h3 className="text-2xl font-semibold mb-2">WHOSE MOVIE ARE WE PICKING?</h3>
+      <Button onClick={spin}>Spin Picker</Button>
+
+      <div className="mt-10 flex justify-center items-center">
+        {isSpinning && (
+          <div className="spinner-border animate-spin inline-block w-16 h-16 border-4 rounded-full border-t-blue-500 border-r-transparent border-b-transparent border-l-blue-500">
+            <span className="sr-only">Loading...</span>
+          </div>
+        )}
+
+        {!isSpinning && selectedItem && (
+          <div className="text-2xl font-bold text-green-600">
+            Selected: {selectedItem}
+          </div>
+        )}
       </div>
     </div>
   );
