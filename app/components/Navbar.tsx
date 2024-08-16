@@ -1,5 +1,6 @@
 import { Link, useLocation } from "@remix-run/react";
 import { buttonVariants } from "./ui/button";
+import { SearchMovies } from "./SearchMovies";
 
 export function Navbar() {
   const location = useLocation();
@@ -11,6 +12,10 @@ export function Navbar() {
           <Link className="font-bold" to="/">
             Movie Vibes
           </Link>
+
+          <div>
+            <SearchMovies />
+          </div>
 
           <ul className="flex items-center">
             <li>

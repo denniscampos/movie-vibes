@@ -4,15 +4,12 @@ import {
   json,
   type MetaFunction,
 } from "@remix-run/node";
-import { redirect, useActionData, useLoaderData } from "@remix-run/react";
+import { redirect, useLoaderData } from "@remix-run/react";
 import { useState } from "react";
-import { searchMovie } from "services/tmdb";
 import { usernameCookie } from "utils/cookies";
 import { z } from "zod";
 import { columns } from "~/components/Columns";
 import { DataTable } from "~/components/DataTable";
-import { MovieList } from "~/components/MovieList";
-import { SearchMovies } from "~/components/SearchMovies";
 import { Button } from "~/components/ui/button";
 import { MovieStatus } from "~/lib/status";
 import {
@@ -56,7 +53,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const movieStatus = body.get("movieStatus") as MovieStatus;
 
   const action = body.get("_action");
-  const search = body.get("searchMovies");
 
   const movieTitle = body.get("movieTitle") as string;
   const movieReleaseDate = body.get("movieReleaseDate") as string;
@@ -70,12 +66,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   if (action === "create") {
     await saveToDB({ movieName: movieTitle, releaseDate: movieReleaseDate });
     return redirect("/movies");
-  }
-
-  if (action === "search") {
-    const searchResults = await searchMovie(search as string);
-
-    return json(searchResults);
   }
 
   if (action === "update") {
@@ -110,17 +100,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
 export default function Index() {
   const loaderData = useLoaderData<typeof loader>();
-  const actionData = useActionData<typeof action>();
 
   return (
     <div className="py-10">
-      <SearchMovies />
-      <MovieList movies={actionData} />
-
       <h2 className="text-3xl font-semibold">Upcoming Movies</h2>
-
       <DataTable columns={columns} data={loaderData} />
-
       <NameSpinner />
     </div>
   );
