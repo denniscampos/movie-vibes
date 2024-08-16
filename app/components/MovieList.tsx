@@ -10,7 +10,7 @@ interface MovieListProps {
 
 export function MovieList({ movies }: { movies: MovieListProps[] }) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-5">
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 pb-5">
       {movies &&
         movies.map(
           (movie: {
@@ -21,14 +21,14 @@ export function MovieList({ movies }: { movies: MovieListProps[] }) {
           }) => (
             <div
               key={movie.id}
-              className="bg-white shadow-lg rounded-lg overflow-hidden hover:shadow-xl transition-shadow duration-300"
+              className="bg-white shadow-lg rounded-lg overflow-hidden hover:shadow-xl transition-shadow duration-300 w-60"
             >
-              <div className="h-64 overflow-hidden">
+              <div className="h-80">
                 {movie.posterPath ? (
                   <img
                     src={movie.posterPath}
                     alt={movie.title}
-                    className="object-cover w-full h-full"
+                    className="object-contain w-full h-full"
                   />
                 ) : (
                   <div className="flex items-center justify-center w-full h-full bg-gray-200">
@@ -59,7 +59,7 @@ function SaveMovieButton({ movie }: { movie: MovieListProps }) {
       <input type="hidden" name="movieTitle" value={movie.title} />
       <input type="hidden" name="movieReleaseDate" value={movie.releaseDate} />
 
-      <Button type="submit" name="_action" value="create">
+      <Button type="submit">
         {loading ? <Loader2 className="animate-spin" /> : "Save Movie to DB"}
       </Button>
     </Form>

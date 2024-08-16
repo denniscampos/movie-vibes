@@ -1,6 +1,7 @@
 import { Link, useLocation } from "@remix-run/react";
 import { buttonVariants } from "./ui/button";
 import { SearchMovies } from "./SearchMovies";
+import { cn } from "~/lib/utils";
 
 export function Navbar() {
   const location = useLocation();
@@ -9,7 +10,7 @@ export function Navbar() {
     <>
       {pathname === "/login" ? null : (
         <header className="flex py-4 items-center justify-between shadow-md pl-4">
-          <Link className="font-bold" to="/">
+          <Link className="text-sm sm:text-base font-bold" to="/">
             Movie Vibes
           </Link>
 
@@ -19,12 +20,24 @@ export function Navbar() {
 
           <ul className="flex items-center">
             <li>
-              <Link className={buttonVariants({ variant: "link" })} to="/movies">
+              <Link
+                className={cn(
+                  buttonVariants({ variant: "link" }),
+                  "py-1 px-2 md:px-4 md:py-2 text-xs sm:text-base"
+                )}
+                to="/movies"
+              >
                 Movies
               </Link>
             </li>
             <li>
-              <Link className={buttonVariants({ variant: "link" })} to="/movies/new">
+              <Link
+                className={cn(
+                  buttonVariants({ variant: "link" }),
+                  "py-1 px-2 md:px-4 md:py-2 text-xs sm:text-base"
+                )}
+                to="/movies/new"
+              >
                 Add Movie
               </Link>
             </li>
