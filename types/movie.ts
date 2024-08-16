@@ -15,5 +15,6 @@ export type MovieAPITypes = {
   id: number;
   title: string;
   release_date: string;
-  poster_path: string;
+  poster_path?: string | null;
+  overview?: string;
 };

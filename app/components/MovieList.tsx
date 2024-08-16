@@ -1,6 +1,7 @@
-import { Form, useNavigation } from "@remix-run/react";
+import { Form, Link, useNavigation } from "@remix-run/react";
 import { Button } from "./ui/button";
 import { Loader2 } from "lucide-react";
+
 interface MovieListProps {
   id: number;
   title: string;
@@ -23,7 +24,7 @@ export function MovieList({ movies }: { movies: MovieListProps[] }) {
               key={movie.id}
               className="bg-white shadow-lg rounded-lg overflow-hidden hover:shadow-xl transition-shadow duration-300 w-60"
             >
-              <div className="h-80">
+              <Link to={`/movie/${movie.id}`} className="block h-80">
                 {movie.posterPath ? (
                   <img
                     src={movie.posterPath}
@@ -35,7 +36,7 @@ export function MovieList({ movies }: { movies: MovieListProps[] }) {
                     <span className="text-gray-500">No Image Available</span>
                   </div>
                 )}
-              </div>
+              </Link>
               <div className="p-4">
                 <h3 className="text-lg font-semibold text-gray-800">{movie.title}</h3>
                 <p className="text-gray-600">{movie.releaseDate}</p>
@@ -50,7 +51,7 @@ export function MovieList({ movies }: { movies: MovieListProps[] }) {
   );
 }
 
-function SaveMovieButton({ movie }: { movie: MovieListProps }) {
+export function SaveMovieButton({ movie }: { movie: MovieListProps }) {
   const navigation = useNavigation();
   const loading = navigation.state === "loading";
 

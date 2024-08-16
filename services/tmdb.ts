@@ -33,3 +33,31 @@ export const searchMovie = async (query: string) => {
 
   return results;
 };
+
+export const searchMovieById = async (id?: string) => {
+  const res = await fetch(`${process.env.TMDB_API_URL}/movie/${id}?language=en-US`, {
+    method: "GET",
+    headers: {
+      accept: "application/json",
+      Authorization: `Bearer ${process.env.TMDB_API_TOKEN}`,
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error(`Failed to fetch movie id ${id}`);
+  }
+
+  const data = await res.json();
+
+  const result: MovieAPITypes = {
+    id: data.id,
+    title: data.title,
+    release_date: data.release_date,
+    poster_path: data.poster_path
+      ? `${process.env.TMDB_API_IMAGE_URL}${data.poster_path}`
+      : null,
+    overview: data.overview,
+  };
+
+  return result;
+};
