@@ -53,14 +53,18 @@ export function MovieList({ movies }: { movies: MovieListProps[] }) {
 
 export function SaveMovieButton({ movie }: { movie: MovieListProps }) {
   const navigation = useNavigation();
-  const loading = navigation.state === "loading";
+  const loading =
+    navigation.state === "submitting" &&
+    navigation.formMethod === "POST" &&
+    // Ensures the loading state applies to the correct movie title
+    navigation.formData?.get("movieTitle") === movie.title;
 
   return (
     <Form method="POST">
       <input type="hidden" name="movieTitle" value={movie.title} />
       <input type="hidden" name="movieReleaseDate" value={movie.releaseDate} />
 
-      <Button type="submit">
+      <Button type="submit" disabled={loading}>
         {loading ? <Loader2 className="animate-spin" /> : "Save Movie to DB"}
       </Button>
     </Form>
