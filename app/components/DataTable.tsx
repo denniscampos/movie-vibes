@@ -30,7 +30,6 @@ import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 
 import { useState } from "react";
-import { RemoveMovies } from "./RemoveMovies";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -65,12 +64,6 @@ export function DataTable<TData, TValue>({
     },
   });
 
-  // Type assertion hack without getting in the way of
-  // maniuplating TData generic type.
-  const movieIds = table
-    .getSelectedRowModel()
-    .rows.map((row) => (row.original as { id: string }).id);
-
   return (
     <div>
       <div className="flex items-center py-4">
@@ -82,35 +75,28 @@ export function DataTable<TData, TValue>({
           }
           className="max-w-sm"
         />
-
-        <div className="ml-auto flex gap-2">
-          {/* Track selected movies */}
-          {Object.keys(rowSelection).length !== 0 ? (
-            <RemoveMovies movieIds={movieIds} onRowSelectionChange={setRowSelection} />
-          ) : null}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline">Columns</Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              {table
-                .getAllColumns()
-                .filter((column) => column.getCanHide())
-                .map((column) => {
-                  return (
-                    <DropdownMenuCheckboxItem
-                      key={column.id}
-                      className="capitalize"
-                      checked={column.getIsVisible()}
-                      onCheckedChange={(value) => column.toggleVisibility(!!value)}
-                    >
-                      {column.id}
-                    </DropdownMenuCheckboxItem>
-                  );
-                })}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline">Columns</Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            {table
+              .getAllColumns()
+              .filter((column) => column.getCanHide())
+              .map((column) => {
+                return (
+                  <DropdownMenuCheckboxItem
+                    key={column.id}
+                    className="capitalize"
+                    checked={column.getIsVisible()}
+                    onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                  >
+                    {column.id}
+                  </DropdownMenuCheckboxItem>
+                );
+              })}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
       <div className="rounded-md border">
         <Table>

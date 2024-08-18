@@ -5,6 +5,7 @@ import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import { SelectMovieStatus } from "./SelectMovieStatus";
 import { TableDropdown } from "./TableDropdown";
+import { MovieDropdownSettings } from "./MovieDropdownSettings";
 
 export const columns: ColumnDef<Movies>[] = [
   {
@@ -80,6 +81,20 @@ export const columns: ColumnDef<Movies>[] = [
   },
   {
     id: "actions",
+    header: ({ table }) => {
+      const selectedRows = table
+        .getSelectedRowModel()
+        .rows.map(({ original }) => original.id);
+
+      const tableOptions = table;
+
+      if (selectedRows.length > 0) {
+        const movieId = table.getSelectedRowModel().rows.map((row) => row.original.id);
+        return <MovieDropdownSettings movieId={movieId} table={tableOptions} />;
+      }
+
+      return null;
+    },
     cell: ({ row }) => {
       const movie = {
         id: row.original.id,
