@@ -158,14 +158,18 @@ export const updateMovie = async ({
   });
 };
 
-export const removeMovie = async (movieId: string) => {
-  if (!movieId) {
+export const removeMovies = async (movieIds: string[]) => {
+  if (!movieIds) {
     throw new Error("Movie ID is required");
   }
 
-  return db.movie.delete({
-    where: {
-      id: movieId,
-    },
-  });
+  await Promise.all(
+    movieIds.map((id) => {
+      return db.movie.delete({
+        where: {
+          id,
+        },
+      });
+    })
+  );
 };

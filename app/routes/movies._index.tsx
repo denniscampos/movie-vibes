@@ -4,7 +4,7 @@ import { buttonVariants } from "~/components/ui/button";
 import {
   changeMovieStatus,
   fetchMovies,
-  removeMovie,
+  removeMovies,
   updateMovie,
 } from "~/models/movie.server";
 import { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
@@ -70,8 +70,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
   if (action === "destroy") {
     const movieId = body.get("movieId") as string;
-    await removeMovie(movieId);
-
+    await removeMovies(movieId.split(","));
     return json({ success: true });
   }
 };
