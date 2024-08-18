@@ -15,7 +15,7 @@ import { MovieStatus } from "~/lib/status";
 import {
   changeMovieStatus,
   fetchUpcomingMovies,
-  removeMovie,
+  removeMovies,
   saveToDB,
   updateMovie,
 } from "~/models/movie.server";
@@ -92,9 +92,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
   if (action === "destroy") {
     const movieId = body.get("movieId") as string;
-    await removeMovie(movieId);
-
-    return redirect("/");
+    await removeMovies(movieId.split(","));
+    return json({ success: true });
   }
 };
 
