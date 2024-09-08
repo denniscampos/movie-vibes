@@ -12,6 +12,9 @@ interface MovieListProps {
 export function MovieList({ movies }: { movies: MovieListProps[] }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 pb-5">
+      {movies.length === 0 ? (
+        <p>No movies found. Please try a different search.</p>
+      ) : null}
       {movies &&
         movies.map(
           (movie: {
