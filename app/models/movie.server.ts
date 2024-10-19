@@ -44,6 +44,7 @@ export const fetchUpcomingMovies = async () => {
           name: true,
         },
       },
+      imageUrl: true,
       status: true,
     },
   });
@@ -103,9 +104,11 @@ export const changeMovieStatus = async ({
 export const saveToDB = async ({
   movieName,
   releaseDate,
+  imageUrl,
 }: {
   movieName: string;
   releaseDate: string;
+  imageUrl?: string;
 }) => {
   const getYear = releaseDate.split("-")[0];
   return db.movie.create({
@@ -118,6 +121,7 @@ export const saveToDB = async ({
           name: "",
         },
       },
+      imageUrl,
       status: MovieStatus.NOT_WATCHED,
       selectedBy: "",
     },

@@ -14,10 +14,11 @@ datasource db {
 }
 
 model Movie {
-  id          String @id @default(cuid())
+  id          String  @id @default(cuid())
   movieName   String
   // we just need the year no need for actual dates
   releaseDate String
+  imageUrl    String?
 
   selectedBy String
 
