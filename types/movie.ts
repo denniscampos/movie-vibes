@@ -9,7 +9,7 @@ export type Movies = {
   };
   selectedBy: string;
   status: MovieStatusType;
-  imageUrl: string | null;
+  imageUrl?: string | null;
 };
 
 export type MovieAPITypes = {
