@@ -21,7 +21,7 @@ import { Label } from "./ui/label";
 import { useFetcher } from "@remix-run/react";
 import { Input } from "./ui/input";
 
-export function TableDropdown({ movie }: { movie: Omit<Movies, "status"> }) {
+export function TableDropdown({ movie }: { movie: Omit<Movies, "status" | "imageUrl"> }) {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showRemoveDialog, setShowRemoveDialog] = useState(false);
 
@@ -65,7 +65,7 @@ export function EditDialog({
 }: {
   showEditDialog: boolean;
   setShowEditDialog: (value: boolean) => void;
-  movie: Omit<Movies, "status">;
+  movie: Omit<Movies, "status" | "imageUrl">;
 }) {
   const fetcher = useFetcher();
   const isEditing = fetcher.state !== "idle";
