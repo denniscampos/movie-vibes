@@ -8,9 +8,8 @@ import { redirect, useLoaderData } from "@remix-run/react";
 import { useState } from "react";
 import { usernameCookie } from "utils/cookies";
 import { z } from "zod";
-import { columns } from "~/components/Columns";
-import { DataTable } from "~/components/DataTable";
 import { Button } from "~/components/ui/button";
+import { UpcomingMovies } from "~/components/UpcomingMovies";
 import { MovieStatus } from "~/lib/status";
 import {
   changeMovieStatus,
@@ -102,8 +101,7 @@ export default function Index() {
 
   return (
     <div className="py-10">
-      <h2 className="text-3xl font-semibold">Upcoming Movies</h2>
-      <DataTable columns={columns} data={loaderData} />
+      <UpcomingMovies movies={loaderData} />
       <NameSpinner />
     </div>
   );

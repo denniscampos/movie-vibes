@@ -66,6 +66,7 @@ export function SaveMovieButton({ movie }: { movie: MovieListProps }) {
     <Form method="POST">
       <input type="hidden" name="movieTitle" value={movie.title} />
       <input type="hidden" name="movieReleaseDate" value={movie.releaseDate} />
+      <input type="hidden" name="imageUrl" value={movie.posterPath} />
 
       <Button type="submit" disabled={loading}>
         {loading ? <Loader2 className="animate-spin" /> : "Save Movie to DB"}

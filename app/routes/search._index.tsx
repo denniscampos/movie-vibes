@@ -17,8 +17,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
   const movieTitle = body.get("movieTitle") as string;
   const movieReleaseDate = body.get("movieReleaseDate") as string;
+  const imageUrl = body.get("imageUrl") as string;
 
-  await saveToDB({ movieName: movieTitle, releaseDate: movieReleaseDate });
+  await saveToDB({ movieName: movieTitle, releaseDate: movieReleaseDate, imageUrl });
   return redirect("/movies");
 };
 
