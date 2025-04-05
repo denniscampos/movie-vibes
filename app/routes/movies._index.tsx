@@ -1,4 +1,4 @@
-import { Link, json, redirect, useLoaderData } from "@remix-run/react";
+import { Link, redirect, useLoaderData } from "@remix-run/react";
 import { DataTable } from "~/components/DataTable";
 import { buttonVariants } from "~/components/ui/button";
 import {
@@ -30,7 +30,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
   const movies = await fetchMovies();
 
-  return json(movies);
+  return movies;
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -43,7 +43,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const movieStatus = body.get("movieStatus") as MovieStatus;
     await changeMovieStatus({ id: movieId, status: movieStatus });
 
-    return json({ message: "Movie status updated" });
+    return { message: "Movie status updated" };
   }
 
   if (action === "update") {
@@ -62,16 +62,16 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       });
 
       const updatedMovie = await updateMovie({ ...parseData, movieId });
-      return json({ updatedMovie });
+      return { updatedMovie };
     } catch (error) {
-      return json({ error });
+      return { error };
     }
   }
 
   if (action === "destroy") {
     const movieId = body.get("movieId") as string;
     await removeMovies(movieId.split(","));
-    return json({ success: true });
+    return { success: true };
   }
 };
 

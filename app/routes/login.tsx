@@ -1,5 +1,5 @@
 import { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
-import { Form, json, redirect, useActionData } from "@remix-run/react";
+import { Form, redirect, useActionData } from "@remix-run/react";
 import { usernameCookie } from "utils/cookies";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -25,7 +25,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const normalizedUsername = users.map((user) => user.toLowerCase());
 
   if (!normalizedUsername.includes(String(username))) {
-    return json({ error: "Invalid username, please try again" }, { status: 400 });
+    return { error: "Invalid username, please try again", status: 400 };
   }
 
   const cookie = await usernameCookie.serialize(true);

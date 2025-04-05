@@ -101,7 +101,6 @@ function UpcomingMoviesDialog({
   const fetcher = useFetcher();
   const isEditing = fetcher.state !== "idle";
   const data = fetcher.data;
-  console.log({ data });
 
   useEffect(() => {
     // @ts-expect-error cus ts is dumb sometimes

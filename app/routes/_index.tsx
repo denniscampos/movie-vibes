@@ -1,7 +1,6 @@
 import {
   ActionFunctionArgs,
   LoaderFunctionArgs,
-  json,
   type MetaFunction,
 } from "@remix-run/node";
 import { redirect, useLoaderData } from "@remix-run/react";
@@ -43,7 +42,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
   const upcomingMovies = await fetchUpcomingMovies();
 
-  return json(upcomingMovies);
+  return upcomingMovies;
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -59,7 +58,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   if (action === "movieStatus") {
     await changeMovieStatus({ id: movieId, status: movieStatus });
 
-    return json({ message: "Movie status updated" });
+    return { message: "Movie status updated" };
   }
 
   if (action === "create") {
@@ -83,16 +82,16 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       });
 
       const updatedMovie = await updateMovie({ ...parseData, movieId });
-      return json({ updatedMovie });
+      return { updatedMovie };
     } catch (error) {
-      return json({ error });
+      return { error };
     }
   }
 
   if (action === "destroy") {
     const movieId = body.get("movieId") as string;
     await removeMovies(movieId.split(","));
-    return json({ success: true });
+    return { success: true };
   }
 };
 

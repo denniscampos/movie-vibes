@@ -1,4 +1,4 @@
-import { ActionFunctionArgs, json, LoaderFunctionArgs } from "@remix-run/node";
+import { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { redirect, useLoaderData } from "@remix-run/react";
 import { searchMovieById } from "services/tmdb";
 import { SaveMovieButton } from "~/components/MovieList";
@@ -8,7 +8,7 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
   const movieId = String(params.id);
   const movie = await searchMovieById(movieId);
 
-  return json(movie);
+  return movie;
 };
 
 // TODO: I think there's a way to use the other action function here.

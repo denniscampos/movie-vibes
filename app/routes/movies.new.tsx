@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ActionFunctionArgs, LoaderFunctionArgs, redirect } from "@remix-run/node";
-import { Form, json, useNavigation } from "@remix-run/react";
+import { Form, useNavigation } from "@remix-run/react";
 import { Loader2 } from "lucide-react";
 import { FieldValues } from "react-hook-form";
 import { useRemixForm, getValidatedFormData } from "remix-hook-form";
@@ -55,7 +55,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   );
 
   if (errors) {
-    return json({ errors, receivedValues });
+    return { errors, receivedValues };
   }
 
   const { movieName, categoryName, releaseDate, selectedBy, status } = data;
