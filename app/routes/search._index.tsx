@@ -1,5 +1,9 @@
-import { ActionFunctionArgs, json, LoaderFunctionArgs } from "@remix-run/node";
-import { redirect, useLoaderData } from "@remix-run/react";
+import {
+  ActionFunctionArgs,
+  LoaderFunctionArgs,
+  redirect,
+  useLoaderData,
+} from "react-router";
 import { searchMovie } from "services/tmdb";
 import { MovieList } from "~/components/MovieList";
 import { saveToDB } from "~/models/movie.server";
@@ -9,7 +13,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const q = url.searchParams.get("q") ?? "";
   const searchResults = await searchMovie(q);
 
-  return json(searchResults);
+  return searchResults;
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {

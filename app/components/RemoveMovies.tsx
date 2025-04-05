@@ -1,4 +1,4 @@
-import { useFetcher } from "@remix-run/react";
+import { useFetcher } from "react-router";
 import { useEffect } from "react";
 import { Button } from "./ui/button";
 import { Trash2 } from "lucide-react";

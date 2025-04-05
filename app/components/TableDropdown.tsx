@@ -18,7 +18,7 @@ import {
   DialogTitle,
 } from "./ui/dialog";
 import { Label } from "./ui/label";
-import { useFetcher } from "@remix-run/react";
+import { useFetcher } from "react-router";
 import { Input } from "./ui/input";
 
 export function TableDropdown({ movie }: { movie: Omit<Movies, "status" | "imageUrl"> }) {
@@ -72,13 +72,11 @@ export function EditDialog({
   const data = fetcher.data;
 
   useEffect(() => {
-    // @ts-expect-error cus ts is dumb sometimes
     if (data && data.updatedMovie) {
       setShowEditDialog(false);
     }
   }, [data, setShowEditDialog]);
 
-  // @ts-expect-error cus ts is dumb sometimes
   const errors = data && data.error;
 
   return (

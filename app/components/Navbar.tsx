@@ -1,4 +1,4 @@
-import { Link, useLocation } from "@remix-run/react";
+import { Link, useLocation } from "react-router";
 import { buttonVariants } from "./ui/button";
 import { SearchMovies } from "./SearchMovies";
 import { cn } from "~/lib/utils";

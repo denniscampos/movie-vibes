@@ -1,4 +1,10 @@
-import { Link, redirect, useLoaderData } from "@remix-run/react";
+import {
+  Link,
+  redirect,
+  useLoaderData,
+  ActionFunctionArgs,
+  LoaderFunctionArgs,
+} from "react-router";
 import { DataTable } from "~/components/DataTable";
 import { buttonVariants } from "~/components/ui/button";
 import {
@@ -7,7 +13,6 @@ import {
   removeMovies,
   updateMovie,
 } from "~/models/movie.server";
-import { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { MovieStatus } from "~/lib/status";
 import { columns } from "~/components/Columns";
 import { z } from "zod";

@@ -17,7 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "./ui/dialog";
-import { useFetcher } from "@remix-run/react";
+import { useFetcher } from "react-router";
 import { Label } from "./ui/label";
 import { Input } from "./ui/input";
 import { SelectMovieStatus } from "./SelectMovieStatus";
@@ -103,7 +103,6 @@ function UpcomingMoviesDialog({
   const data = fetcher.data;
 
   useEffect(() => {
-    // @ts-expect-error cus ts is dumb sometimes
     if (data && data.updatedMovie) {
       setShowEditDialog(false);
     }
