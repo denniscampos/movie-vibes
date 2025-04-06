@@ -9,8 +9,8 @@ import { usernameCookie } from "utils/cookies";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
+import { users } from "~/config/users";
 
-const users = ["dnbull", "Lumster", "mon-ster", "Shway", "schwaj"];
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const cookieHeader = request.headers.get("Cookie");
 
@@ -30,7 +30,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const normalizedUsername = users.map((user) => user.toLowerCase());
 
   if (!normalizedUsername.includes(String(username))) {
-    return { error: "Invalid username, please try again", status: 400 };
+    return { error: "Invalid code, please try again" };
   }
 
   const cookie = await usernameCookie.serialize(true);
@@ -42,7 +42,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function LoginPage() {
-  const actionData = useActionData();
+  const actionData = useActionData<typeof action>();
 
   return (
     <Form method="post">
