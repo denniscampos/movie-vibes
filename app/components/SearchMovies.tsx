@@ -1,7 +1,7 @@
 import { Form, useLocation, useNavigation } from "react-router";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
-import { Loader2 } from "lucide-react";
+import { Loader2, Search } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export function SearchMovies() {
@@ -17,16 +17,20 @@ export function SearchMovies() {
   }, [q]);
 
   return (
-    <div className="mx-auto w-full md:w-[500px]">
+    <div className="mx-auto w-full md:w-[300px]">
       <Form className="flex gap-3" method="GET" action="/search">
-        <Input
-          id="q"
-          name="q"
-          type="text"
-          placeholder="Search Movie"
-          value={query}
-          onChange={(event) => setQuery(event.currentTarget.value)}
-        />
+        <div className="relative w-full">
+          <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            id="q"
+            name="q"
+            type="text"
+            placeholder="Search Movie"
+            value={query}
+            onChange={(event) => setQuery(event.currentTarget.value)}
+            className="pl-8"
+          />
+        </div>
         {loading ? <Loader2 className="animate-spin" /> : null}
         <Button
           disabled={loading}

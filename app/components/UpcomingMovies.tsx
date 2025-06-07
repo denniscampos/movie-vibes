@@ -21,6 +21,7 @@ import { useFetcher } from "react-router";
 import { Label } from "./ui/label";
 import { Input } from "./ui/input";
 import { SelectMovieStatus } from "./SelectMovieStatus";
+import { MoviePoster } from "./MoviePoster";
 
 interface UpcomingMoviesProps {
   movies: Movies[];
@@ -29,33 +30,34 @@ interface UpcomingMoviesProps {
 export function UpcomingMovies({ movies }: UpcomingMoviesProps) {
   return (
     <div className="container mx-auto p-4">
-      <h2 className="text-3xl font-bold mb-6 text-center">Upcoming Movie Night Picks</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {movies.map((movie) => (
-          <Card key={movie.id} className="overflow-hidden">
-            <CardHeader className="p-0">
-              <img
-                src={movie.imageUrl ?? ""}
-                alt={`${movie.movieName} poster`}
-                className="w-full h-[400px] object-cover"
-              />
-            </CardHeader>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-xl mb-2">{movie.movieName}</CardTitle>
-                <UpcomingMoviesDropdown movie={movie} />
-              </div>
-              <span>{movie.releaseDate}</span>
-            </CardContent>
-            <CardFooter className="p-4 pt-0 flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <span className="text-sm text-muted-foreground">
+      <h2 className="text-3xl font-bold mb-6">Upcoming Movie Night Picks</h2>
+      <div className="relative">
+        <div className="flex overflow-x-auto gap-6 pb-4 snap-x snap-mandatory">
+          {movies.map((movie) => (
+            <Card key={movie.id} className="flex-none w-[200px] snap-start">
+              <CardHeader className="p-0">
+                <MoviePoster
+                  src={movie.imageUrl ?? undefined}
+                  alt={`${movie.movieName} poster`}
+                />
+              </CardHeader>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-medium line-clamp-2">
+                    {movie.movieName}
+                  </CardTitle>
+                  <UpcomingMoviesDropdown movie={movie} />
+                </div>
+                <span className="text-xs text-muted-foreground">{movie.releaseDate}</span>
+              </CardContent>
+              <CardFooter className="p-4 pt-0">
+                <span className="text-xs text-muted-foreground">
                   Picked by {movie.selectedBy}
                 </span>
-              </div>
-            </CardFooter>
-          </Card>
-        ))}
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
       </div>
     </div>
   );

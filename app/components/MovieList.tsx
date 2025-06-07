@@ -1,6 +1,7 @@
 import { Form, Link, useNavigation } from "react-router";
 import { Button } from "./ui/button";
 import { Loader2 } from "lucide-react";
+import { MoviePoster } from "./MoviePoster";
 
 interface MovieListProps {
   id: number;
@@ -11,45 +12,37 @@ interface MovieListProps {
 
 export function MovieList({ movies }: { movies: MovieListProps[] }) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 pb-5">
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
       {movies.length === 0 ? (
-        <p>No movies found. Please try a different search.</p>
+        <div className="col-span-full text-center py-8 text-muted-foreground">
+          No movies found. Please try a different search.
+        </div>
       ) : null}
       {movies &&
-        movies.map(
-          (movie: {
-            id: number;
-            posterPath: string;
-            title: string;
-            releaseDate: string;
-          }) => (
-            <div
-              key={movie.id}
-              className="bg-white shadow-lg rounded-lg overflow-hidden hover:shadow-xl transition-shadow duration-300 w-60"
-            >
-              <Link to={`/movie/${movie.id}`} className="block h-80">
-                {movie.posterPath ? (
-                  <img
-                    src={movie.posterPath}
-                    alt={movie.title}
-                    className="object-contain w-full h-full"
-                  />
-                ) : (
-                  <div className="flex items-center justify-center w-full h-full bg-gray-200">
-                    <span className="text-gray-500">No Image Available</span>
-                  </div>
-                )}
-              </Link>
-              <div className="p-4">
-                <h3 className="text-lg font-semibold text-gray-800">{movie.title}</h3>
-                <p className="text-gray-600">{movie.releaseDate}</p>
-                <div className="pt-3">
-                  <SaveMovieButton movie={movie} />
-                </div>
+        movies.map((movie) => (
+          <div key={movie.id} className="group relative flex flex-col">
+            <Link to={`/movie/${movie.id}`} className="block">
+              <div className="aspect-[2/3] overflow-hidden rounded-lg">
+                <MoviePoster src={movie.posterPath} alt={movie.title} />
               </div>
+              <div className="mt-2 space-y-1">
+                <h3 className="text-sm font-medium line-clamp-2 group-hover:text-primary transition-colors">
+                  {movie.title}
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  {new Date(movie.releaseDate).toLocaleDateString("en-US", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })}
+                </p>
+              </div>
+            </Link>
+            <div className="mt-2">
+              <SaveMovieButton movie={movie} />
             </div>
-          )
-        )}
+          </div>
+        ))}
     </div>
   );
 }

@@ -12,13 +12,6 @@ import { useRemixForm, getValidatedFormData } from "remix-hook-form";
 import { usernameCookie } from "utils/cookies";
 import { z } from "zod";
 import { Button } from "~/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import {
@@ -98,77 +91,97 @@ export default function MoviesCreatePage() {
   });
 
   return (
-    <div className="py-10">
-      <Card className="w-[350px] mx-auto">
-        <CardHeader>
-          <CardTitle>Add a Movie</CardTitle>
-          <CardDescription>
-            Add a movie to keep track of our movie watching.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form method="POST" onSubmit={handleSubmit}>
-            <div className="space-y-2">
-              <Label htmlFor="movieName">Movie Name</Label>
-              <Input
-                {...register("movieName")}
-                id="movieName"
-                name="movieName"
-                type="text"
-              />
-              <p className="text-red-500">
-                {errors.movieName && errors.movieName.message}
-              </p>
-            </div>
+    <div className="min-h-screen flex items-start bg-transparent py-16">
+      <div className="w-full px-4">
+        <h1 className="text-2xl sm:text-4xl font-bold mb-10">Add New Movie</h1>
+        <Form method="POST" onSubmit={handleSubmit} className="space-y-8">
+          <div className="space-y-2">
+            <Label htmlFor="movieName" className="text-base">
+              Movie Name
+            </Label>
+            <Input
+              {...register("movieName")}
+              id="movieName"
+              name="movieName"
+              type="text"
+              placeholder="Enter movie name"
+              className="h-12 text-base"
+            />
+            <p className="text-red-500 text-sm">
+              {errors.movieName && errors.movieName.message}
+            </p>
+          </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="releaseDate">Release Date</Label>
-              <Input
-                {...register("releaseDate")}
-                id="releaseDate"
-                name="releaseDate"
-                type="text"
-              />
-              <p className="text-red-500">
-                {errors.releaseDate && errors.releaseDate.message}
-              </p>
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="releaseDate" className="text-base">
+              Release Date (YYYY)
+            </Label>
+            <Input
+              {...register("releaseDate")}
+              id="releaseDate"
+              name="releaseDate"
+              type="text"
+              placeholder="2010"
+              className="h-12 text-base"
+            />
+            <p className="text-red-500 text-sm">
+              {errors.releaseDate && errors.releaseDate.message}
+            </p>
+          </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="categoryName">Category</Label>
-              <Input
-                {...register("categoryName")}
-                id="categoryName"
-                name="categoryName"
-                type="text"
-              />
-              <p className="text-red-500">
-                {errors.categoryName && errors.categoryName.message}
-              </p>
+          <div className="space-y-2">
+            <Label htmlFor="categoryName" className="text-base">
+              Category
+            </Label>
+            <Input
+              {...register("categoryName")}
+              id="categoryName"
+              name="categoryName"
+              type="text"
+              placeholder="Enter category"
+              className="h-12 text-base"
+            />
+            <p className="text-red-500 text-sm">
+              {errors.categoryName && errors.categoryName.message}
+            </p>
+          </div>
 
-              <Label htmlFor="selectedBy">Selected By</Label>
-              <Input
-                {...register("selectedBy")}
-                id="selectedBy"
-                name="selectedBy"
-                type="text"
-              />
-              <p className="text-red-500">
-                {errors.selectedBy && errors.selectedBy.message}
-              </p>
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="selectedBy" className="text-base">
+              Selected By
+            </Label>
+            <Input
+              {...register("selectedBy")}
+              id="selectedBy"
+              name="selectedBy"
+              type="text"
+              placeholder="Enter name"
+              className="h-12 text-base"
+            />
+            <p className="text-red-500 text-sm">
+              {errors.selectedBy && errors.selectedBy.message}
+            </p>
+          </div>
 
-            <div>
-              <SelectMovieStatus setValue={setValue} />
-              <p className="text-red-500">{errors.status && errors.status.message}</p>
-            </div>
+          <div className="space-y-2">
+            <Label className="text-base">Movie Status</Label>
+            <SelectMovieStatus setValue={setValue} />
+            <p className="text-red-500 text-sm">
+              {errors.status && errors.status.message}
+            </p>
+          </div>
 
-            <Button className="mt-2" type="submit" disabled={loading}>
+          <div className="flex justify-end">
+            <Button
+              className="mt-4 h-12 text-base font-semibold px-8"
+              type="submit"
+              disabled={loading}
+            >
               {loading ? <Loader2 className="animate-spin" /> : "Add Movie"}
             </Button>
-          </Form>
-        </CardContent>
-      </Card>
+          </div>
+        </Form>
+      </div>
     </div>
   );
 }
@@ -176,7 +189,7 @@ export default function MoviesCreatePage() {
 function SelectMovieStatus({ setValue }: { setValue: FieldValues["setValue"] }) {
   return (
     <Select onValueChange={(value) => setValue("status", value)}>
-      <SelectTrigger className="w-[180px]">
+      <SelectTrigger className="h-12 text-base">
         <SelectValue placeholder="Movie Status" />
       </SelectTrigger>
       <SelectContent>
