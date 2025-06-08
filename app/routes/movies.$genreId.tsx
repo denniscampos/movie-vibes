@@ -1,4 +1,4 @@
-import { LoaderFunctionArgs, useLoaderData } from "react-router";
+import { Link, LoaderFunctionArgs, useLoaderData } from "react-router";
 import {
   getNewReleases,
   getPopularMoviesByGenre,
@@ -44,10 +44,12 @@ export default function MovieCategoryPage() {
         <div className="relative">
           <div className="flex overflow-x-auto gap-6 pb-4 snap-x snap-mandatory">
             {movies.map((movie: MovieAPIResponse) => (
-              <div key={movie.id} className="flex-none w-[200px] snap-start">
-                <MoviePoster src={movie.poster_path} alt={movie.title} />
-                <h3 className="mt-2 text-sm font-medium line-clamp-2">{movie.title}</h3>
-              </div>
+              <Link to={`/movie/${movie.id}`} key={movie.id}>
+                <div className="flex-none w-[200px] snap-start">
+                  <MoviePoster src={movie.poster_path} alt={movie.title} />
+                  <h3 className="mt-2 text-sm font-medium line-clamp-2">{movie.title}</h3>
+                </div>
+              </Link>
             ))}
           </div>
         </div>
@@ -59,10 +61,12 @@ export default function MovieCategoryPage() {
         <div className="relative">
           <div className="flex overflow-x-auto gap-6 pb-4 snap-x snap-mandatory">
             {newReleases.map((movie: MovieAPIResponse) => (
-              <div key={movie.id} className="flex-none w-[200px] snap-start">
-                <MoviePoster src={movie.poster_path} alt={movie.title} />
-                <h3 className="mt-2 text-sm font-medium line-clamp-2">{movie.title}</h3>
-              </div>
+              <Link to={`/movie/${movie.id}`} key={movie.id}>
+                <div className="flex-none w-[200px] snap-start">
+                  <MoviePoster src={movie.poster_path} alt={movie.title} />
+                  <h3 className="mt-2 text-sm font-medium line-clamp-2">{movie.title}</h3>
+                </div>
+              </Link>
             ))}
           </div>
         </div>
@@ -74,10 +78,12 @@ export default function MovieCategoryPage() {
         <div className="relative">
           <div className="flex overflow-x-auto gap-6 pb-4 snap-x snap-mandatory">
             {recommendedMovies.map((movie: MovieAPIResponse) => (
-              <div key={movie.id} className="flex-none w-[200px] snap-start">
-                <MoviePoster src={movie.poster_path} alt={movie.title} />
-                <h3 className="mt-2 text-sm font-medium line-clamp-2">{movie.title}</h3>
-              </div>
+              <Link to={`/movie/${movie.id}`} key={movie.id}>
+                <div className="flex-none w-[200px] snap-start">
+                  <MoviePoster src={movie.poster_path} alt={movie.title} />
+                  <h3 className="mt-2 text-sm font-medium line-clamp-2">{movie.title}</h3>
+                </div>
+              </Link>
             ))}
           </div>
         </div>

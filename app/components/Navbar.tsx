@@ -57,6 +57,17 @@ export function Navbar() {
                     buttonVariants({ variant: "link" }),
                     "py-1 px-2 md:px-4 md:py-2 text-xs sm:text-sm w-full sm:w-auto"
                   )}
+                  to="/browse"
+                >
+                  Browse
+                </Link>
+              </li>
+              <li className="w-full sm:w-auto text-center">
+                <Link
+                  className={cn(
+                    buttonVariants({ variant: "link" }),
+                    "py-1 px-2 md:px-4 md:py-2 text-xs sm:text-sm w-full sm:w-auto"
+                  )}
                   to="/movies"
                 >
                   Database

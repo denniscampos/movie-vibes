@@ -1,16 +1,9 @@
-import {
-  ActionFunctionArgs,
-  Link,
-  LoaderFunctionArgs,
-  useLocation,
-  useNavigate,
-  type MetaFunction,
-} from "react-router";
+import { ActionFunctionArgs, LoaderFunctionArgs, type MetaFunction } from "react-router";
 import { redirect, useLoaderData } from "react-router";
 import { useState } from "react";
 import { usernameCookie } from "utils/cookies";
 import { z } from "zod";
-import { Button, buttonVariants } from "~/components/ui/button";
+import { Button } from "~/components/ui/button";
 import { UpcomingMovies } from "~/components/UpcomingMovies";
 import { MovieStatus } from "~/lib/status";
 import {
@@ -20,11 +13,6 @@ import {
   saveToDB,
   updateMovie,
 } from "~/models/movie.server";
-import { Badge } from "~/components/ui/badge";
-import { getGenreList, searchMoviesByGenre } from "services/tmdb";
-import { Genre, MovieAPIResponse } from "types/movie";
-import { cn } from "~/lib/utils";
-import { MoviePoster } from "~/components/MoviePoster";
 
 export const meta: MetaFunction = () => {
   return [
@@ -48,25 +36,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     return redirect("/login");
   }
 
-  const genres = await getGenreList();
-  const url = new URL(request.url);
-  const genreId = url.searchParams.get("genre") || genres[0]?.id;
-
-  let movies = [];
-  if (genreId) {
-    const genre = genres.find((genre) => String(genre.id) === String(genreId));
-    if (genre) {
-      movies = await searchMoviesByGenre({ genre });
-    }
-  }
-
   const upcomingMovies = await fetchUpcomingMovies();
 
   return {
     upcomingMovies,
-    genres,
-    movies,
-    selectedGenreId: genreId,
   };
 };
 
@@ -124,16 +97,11 @@ export default function Index() {
   const loaderData = useLoaderData<typeof loader>();
 
   return (
-    <div className="py-10">
+    <div className="py-10 overflow-x-hidden">
       <UpcomingMovies movies={loaderData.upcomingMovies} />
       <div className="container mx-auto px-4 py-8 bg-muted/50 rounded-lg my-8">
         <NameSpinner />
       </div>
-      <BrowseByCategory
-        categories={loaderData.genres}
-        movies={loaderData.movies}
-        selectedGenreId={loaderData.selectedGenreId}
-      />
     </div>
   );
 }
@@ -177,73 +145,4 @@ export function NameSpinner() {
       </div>
     </div>
   );
-}
-
-export function BrowseByCategory({
-  categories,
-  movies,
-  selectedGenreId,
-}: {
-  categories: Genre[];
-  movies: MovieAPIResponse[];
-  selectedGenreId: string | number;
-}) {
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  const handleCategoryClick = (genre: Genre) => {
-    const params = new URLSearchParams(location.search);
-    params.set("genre", genre.id.toString());
-    navigate(`?${params.toString()}`, { preventScrollReset: true });
-  };
-
-  const selectedCategory = categories.find(
-    (category) => String(category.id) === String(selectedGenreId)
-  );
-
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-2xl font-semibold">Browse by Category</h3>
-        {selectedCategory && (
-          <Link
-            className={cn(buttonVariants({ variant: "outline" }), "text-sm")}
-            to={`/movies/${selectedGenreId}`}
-          >
-            View all {selectedCategory.name} movies
-          </Link>
-        )}
-      </div>
-      <div className="flex flex-row flex-wrap gap-2 mb-6">
-        {categories.map((category) => (
-          <button key={category.id} onClick={() => handleCategoryClick(category)}>
-            <Category
-              category={category.name}
-              selected={String(selectedGenreId) === String(category.id)}
-            />
-          </button>
-        ))}
-      </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-        {movies.map((movie) => (
-          <Link to={`/movie/${movie.id}`} key={movie.id}>
-            <div key={movie.id} className="w-full">
-              <MoviePoster src={movie.poster_path} alt={movie.title} />
-              <h3 className="text-sm font-medium mt-2 line-clamp-2">{movie.title}</h3>
-            </div>
-          </Link>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-export function Category({
-  category,
-  selected,
-}: {
-  category: string;
-  selected?: boolean;
-}) {
-  return <Badge variant={selected ? "default" : "outline"}>{category}</Badge>;
 }
