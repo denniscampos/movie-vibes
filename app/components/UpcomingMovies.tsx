@@ -30,7 +30,7 @@ interface UpcomingMoviesProps {
 export function UpcomingMovies({ movies }: UpcomingMoviesProps) {
   return (
     <div className="container mx-auto p-4">
-      <h2 className="text-3xl font-bold mb-6">Upcoming Movie Night Picks</h2>
+      <h2 className="text-xl sm:text-3xl font-bold mb-6">Upcoming Movie Night Picks</h2>
       <div className="relative">
         <div className="flex overflow-x-auto gap-6 pb-4 snap-x snap-mandatory">
           {movies.map((movie) => (

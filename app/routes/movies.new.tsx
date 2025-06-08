@@ -91,7 +91,7 @@ export default function MoviesCreatePage() {
   });
 
   return (
-    <div className="min-h-screen flex items-start bg-transparent py-16">
+    <div className="container mx-auto px-4 min-h-screen flex items-start bg-transparent py-16">
       <div className="w-full px-4">
         <h1 className="text-2xl sm:text-4xl font-bold mb-10">Add New Movie</h1>
         <Form method="POST" onSubmit={handleSubmit} className="space-y-8">

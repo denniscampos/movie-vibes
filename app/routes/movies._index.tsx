@@ -86,7 +86,7 @@ export default function MoviesPage() {
   return (
     <div className="py-10">
       <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-semibold">Movie Database</h2>
+        <h2 className="text-xl sm:text-3xl font-semibold">Movie Database</h2>
         <Link className={buttonVariants()} to="/movies/new">
           + Add New Movie
         </Link>

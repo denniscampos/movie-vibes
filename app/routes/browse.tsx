@@ -1,18 +1,26 @@
 import {
   Link,
   LoaderFunctionArgs,
+  redirect,
   useLoaderData,
   useLocation,
   useNavigate,
 } from "react-router";
 import { getGenreList, searchMoviesByGenre } from "services/tmdb";
 import { Genre, MovieAPIResponse } from "types/movie";
+import { usernameCookie } from "utils/cookies";
 import { MoviePoster } from "~/components/MoviePoster";
 import { Badge } from "~/components/ui/badge";
 import { buttonVariants } from "~/components/ui/button";
 import { cn } from "~/lib/utils";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const cookieHeader = request.headers.get("Cookie");
+  const userVisited = (await usernameCookie.parse(cookieHeader)) || false;
+
+  if (!userVisited) {
+    return redirect("/login");
+  }
   const genres = await getGenreList();
   const url = new URL(request.url);
   const genreId = url.searchParams.get("genre") || genres[0]?.id;
