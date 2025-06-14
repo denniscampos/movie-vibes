@@ -58,12 +58,14 @@ export const createMovie = async ({
   selectedBy,
   categoryName,
   status,
+  imageUrl,
 }: {
   movieName: string;
   releaseDate: string;
   selectedBy: string;
   categoryName: string;
   status: MovieStatus;
+  imageUrl?: string;
 }) => {
   return db.movie.create({
     data: {
@@ -76,6 +78,7 @@ export const createMovie = async ({
       releaseDate,
       selectedBy,
       status,
+      imageUrl,
     },
   });
 };
