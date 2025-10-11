@@ -1,9 +1,11 @@
 export function MoviePoster({
   src,
   alt,
+  className,
 }: {
   src: string | null | undefined;
   alt: string;
+  className?: string;
 }) {
   if (!src) {
     return (
@@ -33,7 +35,7 @@ export function MoviePoster({
     <img
       src={src}
       alt={alt}
-      className="w-full h-[300px] object-cover rounded-lg shadow-md"
+      className={`w-full h-[300px] object-cover rounded-lg shadow-md ${className}`}
     />
   );
 }

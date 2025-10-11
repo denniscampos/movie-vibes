@@ -34,7 +34,7 @@ export function UpcomingMovies({ movies }: UpcomingMoviesProps) {
       <div className="relative">
         <div className="flex overflow-x-auto gap-6 pb-4 snap-x snap-mandatory">
           {movies.map((movie) => (
-            <Card key={movie.id} className="flex-none w-[200px] snap-start">
+            <Card key={movie.id} className="flex-none w-[200px] snap-start p-0">
               <CardHeader className="p-0">
                 <MoviePoster
                   src={movie.imageUrl ?? undefined}
