@@ -84,7 +84,7 @@ export default function BrowsePage() {
         {movies.map((movie: MovieAPIResponse) => (
           <Link to={`/movie/${movie.id}`} key={movie.id}>
             <div className="w-full">
-              <MoviePoster src={movie.poster_path} alt={movie.title} />
+              <MoviePoster src={movie.poster_path} alt={movie.title} className="h-full" />
               <h3 className="text-sm font-medium mt-2 line-clamp-2">{movie.title}</h3>
             </div>
           </Link>
@@ -101,5 +101,5 @@ export function Category({
   category: string;
   selected?: boolean;
 }) {
-  return <Badge variant={selected ? "default" : "outline-solid"}>{category}</Badge>;
+  return <Badge variant={selected ? "default" : "outline"}>{category}</Badge>;
 }
