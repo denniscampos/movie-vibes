@@ -22,7 +22,7 @@ export function MovieList({ movies }: { movies: MovieListProps[] }) {
         movies.map((movie) => (
           <div key={movie.id} className="group relative flex flex-col">
             <Link to={`/movie/${movie.id}`} className="block">
-              <div className="aspect-[2/3] overflow-hidden rounded-lg">
+              <div className="aspect-2/3 overflow-hidden rounded-lg">
                 <MoviePoster src={movie.posterPath} alt={movie.title} />
               </div>
               <div className="mt-2 space-y-1">

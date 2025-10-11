@@ -101,5 +101,5 @@ export function Category({
   category: string;
   selected?: boolean;
 }) {
-  return <Badge variant={selected ? "default" : "outline"}>{category}</Badge>;
+  return <Badge variant={selected ? "default" : "outline-solid"}>{category}</Badge>;
 }
