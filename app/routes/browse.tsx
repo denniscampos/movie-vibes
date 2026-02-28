@@ -54,7 +54,7 @@ export default function BrowsePage() {
   };
 
   const selectedCategory = categories.find(
-    (category) => String(category.id) === String(selectedGenreId)
+    (category) => String(category.id) === String(selectedGenreId),
   );
 
   return (
@@ -64,7 +64,7 @@ export default function BrowsePage() {
         {selectedCategory && (
           <Link
             className={cn(buttonVariants({ variant: "outline" }), "text-sm")}
-            to={`/movies/${selectedGenreId}`}
+            to={`/movies/genre/${selectedGenreId}`}
           >
             View all {selectedCategory.name} movies
           </Link>

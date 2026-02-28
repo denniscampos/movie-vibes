@@ -10,7 +10,7 @@ export async function searchMovie(query: string) {
         accept: "application/json",
         Authorization: `Bearer ${process.env.TMDB_API_TOKEN}`,
       },
-    }
+    },
   );
 
   if (!res.ok) {
@@ -72,7 +72,7 @@ export async function searchMoviesByGenre({ genre }: { genre: Genre }) {
         accept: "application/json",
         Authorization: `Bearer ${process.env.TMDB_API_TOKEN}`,
       },
-    }
+    },
   );
 
   if (!res.ok) {
@@ -107,7 +107,7 @@ export async function getGenreList() {
           accept: "application/json",
           Authorization: `Bearer ${process.env.TMDB_API_TOKEN}`,
         },
-      }
+      },
     );
 
     if (!res.ok) {
@@ -133,7 +133,7 @@ export async function getPopularMoviesByGenre({ genreId }: { genreId: number }) 
         accept: "application/json",
         Authorization: `Bearer ${process.env.TMDB_API_TOKEN}`,
       },
-    }
+    },
   );
 
   if (!res.ok) {
@@ -162,7 +162,7 @@ export async function getNewReleases({ genreId }: { genreId: number }) {
           accept: "application/json",
           Authorization: `Bearer ${process.env.TMDB_API_TOKEN}`,
         },
-      }
+      },
     );
 
     if (!res.ok) {
@@ -198,7 +198,7 @@ export async function getRecommendedMovies({ genreId }: { genreId: number }) {
           accept: "application/json",
           Authorization: `Bearer ${process.env.TMDB_API_TOKEN}`,
         },
-      }
+      },
     );
 
     if (!res.ok) {

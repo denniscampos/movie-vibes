@@ -44,7 +44,7 @@ export default function MovieCategoryPage() {
         <div className="relative">
           <div className="flex overflow-x-auto gap-6 pb-4 snap-x snap-mandatory">
             {movies.map((movie: MovieAPIResponse) => (
-              <Link to={`/movie/${movie.id}`} key={movie.id}>
+              <Link to={`/movies/${movie.id}`} key={movie.id}>
                 <div className="flex-none w-[200px] snap-start">
                   <MoviePoster src={movie.poster_path} alt={movie.title} />
                   <h3 className="mt-2 text-sm font-medium line-clamp-2">{movie.title}</h3>
@@ -61,7 +61,7 @@ export default function MovieCategoryPage() {
         <div className="relative">
           <div className="flex overflow-x-auto gap-6 pb-4 snap-x snap-mandatory">
             {newReleases.map((movie: MovieAPIResponse) => (
-              <Link to={`/movie/${movie.id}`} key={movie.id}>
+              <Link to={`/movies/${movie.id}`} key={movie.id}>
                 <div className="flex-none w-[200px] snap-start">
                   <MoviePoster src={movie.poster_path} alt={movie.title} />
                   <h3 className="mt-2 text-sm font-medium line-clamp-2">{movie.title}</h3>
@@ -78,7 +78,7 @@ export default function MovieCategoryPage() {
         <div className="relative">
           <div className="flex overflow-x-auto gap-6 pb-4 snap-x snap-mandatory">
             {recommendedMovies.map((movie: MovieAPIResponse) => (
-              <Link to={`/movie/${movie.id}`} key={movie.id}>
+              <Link to={`/movies/${movie.id}`} key={movie.id}>
                 <div className="flex-none w-[200px] snap-start">
                   <MoviePoster src={movie.poster_path} alt={movie.title} />
                   <h3 className="mt-2 text-sm font-medium line-clamp-2">{movie.title}</h3>
