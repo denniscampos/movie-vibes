@@ -1,4 +1,4 @@
-import { MovieStatus } from "@prisma/client";
+import { MovieStatus } from "../../prisma/generated/prisma/client.js";
 import { db } from "~/db.server";
 
 export const fetchMovies = async (searchQuery?: string) => {

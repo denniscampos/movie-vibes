@@ -1,10 +1,10 @@
-import { PrismaClient } from "@prisma/client";
+import "dotenv/config";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "../prisma/generated/prisma/client.js";
 
-import { singleton } from "~/singleton.server";
+const connectionString = `${process.env.DATABASE_URL}`;
 
-// Hard-code a unique key, so we can look up the client when this module gets re-imported
-
-const db = singleton("prisma", () => new PrismaClient());
-db.$connect();
+const adapter = new PrismaPg({ connectionString });
+const db = new PrismaClient({ adapter });
 
 export { db };
