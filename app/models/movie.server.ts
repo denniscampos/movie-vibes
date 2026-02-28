@@ -1,5 +1,5 @@
 
-import { MovieStatus } from "prisma/generated/prisma/enums";
+import { MovieStatus } from "~/lib/generated/prisma/enums";
 import { db } from "~/db.server";
 
 export const fetchMovies = async (searchQuery?: string) => {
