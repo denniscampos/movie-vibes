@@ -5,7 +5,7 @@ import tsconfigPaths from "vite-tsconfig-paths";
 export default defineConfig({
   build: {
     rollupOptions: {
-      external: ["@prisma/client"],
+      external: ["@prisma/client", "~/lib/generated/prisma", /^@prisma\/client\/.*/],
     },
   },
   server: {
