@@ -10,7 +10,7 @@
 Install dependencies
 
 ```bash
-npm install
+pnpm install
 ```
 
 Run `cp .env.sample .env`
@@ -18,11 +18,11 @@ Run `cp .env.sample .env`
 Generate and migrate your DB
 
 ```bash
-npx prisma migrate dev && npx prisma generate
+pnpm exec prisma migrate dev && pnpm exec prisma generate
 ```
 
 Run the server
 
 ```
-npm run dev
+pnpm run dev
 ```
