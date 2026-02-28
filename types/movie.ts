@@ -12,15 +12,23 @@ export type Movies = {
   imageUrl?: string | null;
 };
 
+export type Genre = {
+  id: number;
+  name: string;
+};
+
 export type MovieAPIResponse = {
   id: number;
   title: string;
   release_date: string;
   poster_path?: string | null;
   overview?: string;
-};
-
-export type Genre = {
-  id: number;
-  name: string;
+  genres?: Genre[];
+  runtime?: number | null;
+  vote_average?: number;
+  vote_count?: number;
+  status?: string;
+  tagline?: string;
+  original_language?: string;
+  popularity?: number;
 };

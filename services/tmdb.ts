@@ -58,6 +58,14 @@ export async function searchMovieById(id?: string) {
       ? `${process.env.TMDB_API_IMAGE_URL}${data.poster_path}`
       : null,
     overview: data.overview,
+    genres: data.genres,
+    runtime: data.runtime,
+    vote_average: data.vote_average,
+    vote_count: data.vote_count,
+    status: data.status,
+    tagline: data.tagline,
+    original_language: data.original_language,
+    popularity: data.popularity,
   };
 
   return result;
