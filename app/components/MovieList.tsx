@@ -1,4 +1,4 @@
-import { Form, Link, useNavigation } from "react-router";
+import { Form, href, Link, useNavigation } from "react-router";
 import { Button } from "./ui/button";
 import { Loader2 } from "lucide-react";
 import { MoviePoster } from "./MoviePoster";
@@ -21,7 +21,7 @@ export function MovieList({ movies }: { movies: MovieListProps[] }) {
       {movies &&
         movies.map((movie) => (
           <div key={movie.id} className="group relative flex flex-col">
-            <Link to={`/movie/${movie.id}`} className="block">
+            <Link to={href(`/movies/:id`, { id: movie.id.toString() })} className="block">
               <div className="aspect-2/3 overflow-hidden rounded-lg">
                 <MoviePoster src={movie.posterPath} alt={movie.title} />
               </div>

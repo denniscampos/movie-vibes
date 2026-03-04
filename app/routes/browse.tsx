@@ -1,4 +1,5 @@
 import {
+  href,
   Link,
   LoaderFunctionArgs,
   redirect,
@@ -64,7 +65,7 @@ export default function BrowsePage() {
         {selectedCategory && (
           <Link
             className={cn(buttonVariants({ variant: "outline" }), "text-sm")}
-            to={`/movies/genre/${selectedGenreId}`}
+            to={href(`/movies/genre/:genreId`, { genreId: selectedGenreId.toString() })}
           >
             View all {selectedCategory.name} movies
           </Link>
@@ -82,7 +83,7 @@ export default function BrowsePage() {
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
         {movies.map((movie: MovieAPIResponse) => (
-          <Link to={`/movie/${movie.id}`} key={movie.id}>
+          <Link to={href(`/movies/:id`, { id: movie.id.toString() })} key={movie.id}>
             <div className="w-full">
               <MoviePoster src={movie.poster_path} alt={movie.title} className="h-full" />
               <h3 className="text-sm font-medium mt-2 line-clamp-2">{movie.title}</h3>

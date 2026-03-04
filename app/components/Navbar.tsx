@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router";
+import { href, Link, useLocation } from "react-router";
 import { buttonVariants } from "./ui/button";
 import { SearchMovies } from "./SearchMovies";
 import { cn } from "~/lib/utils";
@@ -17,7 +17,7 @@ export function Navbar() {
           <div className="flex items-center justify-between w-full sm:w-auto">
             <Link
               className="text-sm sm:text-base font-bold flex items-center gap-2"
-              to="/"
+              to={href("/")}
             >
               <Clapperboard className="w-4 h-4" />
               Movie Vibes
@@ -44,9 +44,9 @@ export function Navbar() {
                 <Link
                   className={cn(
                     buttonVariants({ variant: "link" }),
-                    "py-1 px-2 md:px-4 md:py-2 text-xs sm:text-sm w-full sm:w-auto"
+                    "py-1 px-2 md:px-4 md:py-2 text-xs sm:text-sm w-full sm:w-auto",
                   )}
-                  to="/"
+                  to={href("/")}
                 >
                   Home
                 </Link>
@@ -55,9 +55,9 @@ export function Navbar() {
                 <Link
                   className={cn(
                     buttonVariants({ variant: "link" }),
-                    "py-1 px-2 md:px-4 md:py-2 text-xs sm:text-sm w-full sm:w-auto"
+                    "py-1 px-2 md:px-4 md:py-2 text-xs sm:text-sm w-full sm:w-auto",
                   )}
-                  to="/browse"
+                  to={href("/browse")}
                 >
                   Browse
                 </Link>
@@ -66,9 +66,9 @@ export function Navbar() {
                 <Link
                   className={cn(
                     buttonVariants({ variant: "link" }),
-                    "py-1 px-2 md:px-4 md:py-2 text-xs sm:text-sm w-full sm:w-auto"
+                    "py-1 px-2 md:px-4 md:py-2 text-xs sm:text-sm w-full sm:w-auto",
                   )}
-                  to="/movies"
+                  to={href("/movies")}
                 >
                   Database
                 </Link>
@@ -77,9 +77,9 @@ export function Navbar() {
                 <Link
                   className={cn(
                     buttonVariants({ variant: "link" }),
-                    "py-1 px-2 md:px-4 md:py-2 text-xs sm:text-sm w-full sm:w-auto"
+                    "py-1 px-2 md:px-4 md:py-2 text-xs sm:text-sm w-full sm:w-auto",
                   )}
-                  to="/movies/new"
+                  to={href("/movies/new")}
                 >
                   Add Movie
                 </Link>
