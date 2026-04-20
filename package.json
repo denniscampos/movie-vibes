@@ -8,7 +8,7 @@
     "dev": "react-router dev",
     "lint": "eslint --ignore-path .gitignore --cache --cache-location ./node_modules/.cache/eslint .",
     "start": "react-router-serve ./build/server/index.js",
-    "typecheck": "react-router typegen && tsc",
+    "typecheck": "prisma generate && react-router typegen && tsc",
     "test": "vitest"
   },
   "dependencies": {
