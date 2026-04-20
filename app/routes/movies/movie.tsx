@@ -21,8 +21,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
   const movieTitle = body.get("movieTitle") as string;
   const movieReleaseDate = body.get("movieReleaseDate") as string;
+  const imageUrl = body.get("imageUrl") as string;
 
-  await saveToDB({ movieName: movieTitle, releaseDate: movieReleaseDate });
+  await saveToDB({ movieName: movieTitle, releaseDate: movieReleaseDate, imageUrl });
   return redirect("/movies");
 };
 
@@ -37,7 +38,6 @@ export default function MoviePage() {
       <div className="flex flex-col gap-4">
         <h2 className="text-2xl font-semibold">{movie.title}</h2>
         <p>{movie.overview}</p>
-        {/* @ts-expect-error types are off */}
         <SaveMovieButton movie={movie} />
       </div>
     </div>

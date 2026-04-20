@@ -39,8 +39,8 @@ describe("searchMovie", () => {
       {
         id: 1,
         title: "Inception",
-        releaseDate: "2010-07-16",
-        posterPath: "https://image.tmdb.org/t/p/w500/abc.jpg",
+        release_date: "2010-07-16",
+        poster_path: "https://image.tmdb.org/t/p/w500/abc.jpg",
       },
     ]);
   });
