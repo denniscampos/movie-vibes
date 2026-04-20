@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { searchMovie } from "../services/tmdb";
+import { searchMovie, searchMovieById } from "../services/tmdb";
 
 // Set env vars the service reads
 process.env.TMDB_API_URL = "https://api.themoviedb.org/3";
@@ -49,5 +49,41 @@ describe("searchMovie", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false }));
 
     await expect(searchMovie("bad")).rejects.toThrow("Failed to fetch movies");
+  });
+});
+
+describe("searchMovieById", () => {
+  it("returns mapped result on success", async () => {
+    const fakeApiResponse = {
+      id: 550,
+      title: "Fight Club",
+      release_date: "1999-10-15",
+      poster_path: "/abc.jpg",
+      overview: "An insomniac office worker...",
+    };
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(fakeApiResponse),
+      }),
+    );
+
+    const result = await searchMovieById("550");
+
+    expect(result).toEqual({
+      id: 550,
+      title: "Fight Club",
+      release_date: "1999-10-15",
+      poster_path: "https://image.tmdb.org/t/p/w500/abc.jpg",
+      overview: "An insomniac office worker...",
+    });
+  });
+
+  it("throws when the API returns an error", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false }));
+
+    await expect(searchMovieById("550")).rejects.toThrow("Failed to fetch movie id 550");
   });
 });
