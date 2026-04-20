@@ -1,6 +1,10 @@
 import { Genre, MovieAPIResponse } from "types/movie";
 import { genreCache, releaseCache, recommendedCache } from "~/lib/cache";
 
+function withImageUrl(poster_path: string | null): string | null {
+  return poster_path ? `${process.env.TMDB_API_IMAGE_URL}${poster_path}` : null;
+}
+
 export async function searchMovie(query: string) {
   const res = await fetch(
     `${process.env.TMDB_API_URL}/search/movie?query=${query}&include_adult=false&language=en-US&page=1`,
@@ -19,20 +23,16 @@ export async function searchMovie(query: string) {
 
   const data = await res.json();
 
-  let results = [];
-
   if (data && data.results) {
-    results = data.results.map((movie: MovieAPIResponse) => ({
+    return data.results.map((movie: MovieAPIResponse) => ({
       id: movie.id,
       title: movie.title,
-      releaseDate: movie.release_date,
-      posterPath: movie.poster_path
-        ? `${process.env.TMDB_API_IMAGE_URL}${movie.poster_path}`
-        : null,
+      release_date: movie.release_date,
+      poster_path: withImageUrl(movie.poster_path),
     }));
   }
 
-  return results;
+  return [];
 }
 
 export async function searchMovieById(id?: string) {
@@ -54,9 +54,7 @@ export async function searchMovieById(id?: string) {
     id: data.id,
     title: data.title,
     release_date: data.release_date,
-    poster_path: data.poster_path
-      ? `${process.env.TMDB_API_IMAGE_URL}${data.poster_path}`
-      : null,
+    poster_path: withImageUrl(data.poster_path),
     overview: data.overview,
   };
 
@@ -81,18 +79,14 @@ export async function searchMoviesByGenre({ genre }: { genre: Genre }) {
 
   const data = await res.json();
 
-  const results = data.results
+  return data.results
     .map((movie: MovieAPIResponse) => ({
       id: movie.id,
       title: movie.title,
       release_date: movie.release_date,
-      poster_path: movie.poster_path
-        ? `${process.env.TMDB_API_IMAGE_URL}${movie.poster_path}`
-        : null,
+      poster_path: withImageUrl(movie.poster_path),
     }))
     .slice(0, 8);
-
-  return results;
 }
 
 export async function getGenreList() {
@@ -141,13 +135,10 @@ export async function getPopularMoviesByGenre({ genreId }: { genreId: number }) 
   }
 
   const data = await res.json();
-  const results = data.results.map((movie: MovieAPIResponse) => ({
+  return data.results.map((movie: MovieAPIResponse) => ({
     ...movie,
-    poster_path: movie.poster_path
-      ? `${process.env.TMDB_API_IMAGE_URL}${movie.poster_path}`
-      : null,
+    poster_path: withImageUrl(movie.poster_path),
   }));
-  return results;
 }
 
 export async function getNewReleases({ genreId }: { genreId: number }) {
@@ -170,12 +161,9 @@ export async function getNewReleases({ genreId }: { genreId: number }) {
     }
 
     const data = await res.json();
-
     const results = data.results.map((movie: MovieAPIResponse) => ({
       ...movie,
-      poster_path: movie.poster_path
-        ? `${process.env.TMDB_API_IMAGE_URL}${movie.poster_path}`
-        : null,
+      poster_path: withImageUrl(movie.poster_path),
     }));
 
     releaseCache.set("releases", results);
@@ -208,9 +196,7 @@ export async function getRecommendedMovies({ genreId }: { genreId: number }) {
     const data = await res.json();
     const results = data.results.map((movie: MovieAPIResponse) => ({
       ...movie,
-      poster_path: movie.poster_path
-        ? `${process.env.TMDB_API_IMAGE_URL}${movie.poster_path}`
-        : null,
+      poster_path: withImageUrl(movie.poster_path),
     }));
 
     recommendedCache.set("recommended", results);

@@ -6,8 +6,8 @@ import { MoviePoster } from "./MoviePoster";
 interface MovieListProps {
   id: number;
   title: string;
-  releaseDate: string;
-  posterPath: string;
+  release_date: string;
+  poster_path: string | null;
 }
 
 export function MovieList({ movies }: { movies: MovieListProps[] }) {
@@ -23,14 +23,14 @@ export function MovieList({ movies }: { movies: MovieListProps[] }) {
           <div key={movie.id} className="group relative flex flex-col">
             <Link to={href(`/movies/:id`, { id: movie.id.toString() })} className="block">
               <div className="aspect-2/3 overflow-hidden rounded-lg">
-                <MoviePoster src={movie.posterPath} alt={movie.title} />
+                <MoviePoster src={movie.poster_path} alt={movie.title} />
               </div>
               <div className="mt-2 space-y-1">
                 <h3 className="text-sm font-medium line-clamp-2 group-hover:text-primary transition-colors">
                   {movie.title}
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  {new Date(movie.releaseDate).toLocaleDateString("en-US", {
+                  {new Date(movie.release_date).toLocaleDateString("en-US", {
                     year: "numeric",
                     month: "long",
                     day: "numeric",
@@ -58,8 +58,8 @@ export function SaveMovieButton({ movie }: { movie: MovieListProps }) {
   return (
     <Form method="POST">
       <input type="hidden" name="movieTitle" value={movie.title} />
-      <input type="hidden" name="movieReleaseDate" value={movie.releaseDate} />
-      <input type="hidden" name="imageUrl" value={movie.posterPath} />
+      <input type="hidden" name="movieReleaseDate" value={movie.release_date} />
+      <input type="hidden" name="imageUrl" value={movie.poster_path ?? ""} />
 
       <Button type="submit" disabled={loading}>
         {loading ? <Loader2 className="animate-spin" /> : "Save Movie to DB"}

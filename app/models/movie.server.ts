@@ -1,4 +1,3 @@
-
 import db from "~/db.server";
 import { MovieStatus } from "~/lib/generated/prisma/enums";
 
@@ -178,6 +177,6 @@ export const removeMovies = async (movieIds: string[]) => {
           id,
         },
       });
-    })
+    }),
   );
 };
