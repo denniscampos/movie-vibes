@@ -1,13 +1,8 @@
-import {
-  ActionFunctionArgs,
-  LoaderFunctionArgs,
-  redirect,
-  useLoaderData,
-} from "react-router";
+import { ActionFunctionArgs, LoaderFunctionArgs, useLoaderData } from "react-router";
 import { searchMovie } from "services/tmdb";
 import { MovieList } from "~/components/MovieList";
-import { saveToDB } from "~/models/movie.server";
 import { SearchMovies } from "~/components/SearchMovies";
+import { handleMovieAction } from "~/actions/movie.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
@@ -17,16 +12,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   return { searchResults, query: q };
 };
 
-export const action = async ({ request }: ActionFunctionArgs) => {
-  const body = await request.formData();
-
-  const movieTitle = body.get("movieTitle") as string;
-  const movieReleaseDate = body.get("movieReleaseDate") as string;
-  const imageUrl = body.get("imageUrl") as string;
-
-  await saveToDB({ movieName: movieTitle, releaseDate: movieReleaseDate, imageUrl });
-  return redirect("/movies");
-};
+export const action = ({ request }: ActionFunctionArgs) => handleMovieAction(request);
 
 export default function SearchPage() {
   const { searchResults, query } = useLoaderData<typeof loader>();
