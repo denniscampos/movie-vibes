@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-const TEST_USERNAME = process.env.TEST_USERNAME ?? "dnbull";
+const TEST_USERNAME = process.env.TEST_USERNAME ?? "tester";
 const TEST_PASSWORD = process.env.TEST_PASSWORD ?? "movienight";
 
 test.describe("authentication", () => {
@@ -30,7 +30,9 @@ test.describe("authentication", () => {
     await expect(page.getByText("Invalid credentials, please try again")).toBeVisible();
   });
 
-  test("unauthenticated visit to protected route redirects to login", async ({ page }) => {
+  test("unauthenticated visit to protected route redirects to login", async ({
+    page,
+  }) => {
     await page.goto("/movies");
     await expect(page).toHaveURL("/login");
   });
