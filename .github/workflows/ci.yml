@@ -65,6 +65,8 @@ jobs:
 
       - run: pnpm exec prisma migrate deploy
 
+      - run: pnpm exec prisma generate
+
       - run: pnpm exec playwright install --with-deps chromium
 
       - run: pnpm test:e2e
