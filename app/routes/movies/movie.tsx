@@ -1,12 +1,7 @@
-import {
-  ActionFunctionArgs,
-  LoaderFunctionArgs,
-  redirect,
-  useLoaderData,
-} from "react-router";
+import { ActionFunctionArgs, LoaderFunctionArgs, useLoaderData } from "react-router";
 import { searchMovieById } from "services/tmdb";
 import { SaveMovieButton } from "~/components/MovieList";
-import { saveToDB } from "~/models/movie.server";
+import { handleMovieAction } from "~/actions/movie.server";
 
 export const loader = async ({ params }: LoaderFunctionArgs) => {
   const movieId = String(params.id);
@@ -15,17 +10,7 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
   return movie;
 };
 
-// TODO: I think there's a way to use the other action function here.
-export const action = async ({ request }: ActionFunctionArgs) => {
-  const body = await request.formData();
-
-  const movieTitle = body.get("movieTitle") as string;
-  const movieReleaseDate = body.get("movieReleaseDate") as string;
-  const imageUrl = body.get("imageUrl") as string;
-
-  await saveToDB({ movieName: movieTitle, releaseDate: movieReleaseDate, imageUrl });
-  return redirect("/movies");
-};
+export const action = ({ request }: ActionFunctionArgs) => handleMovieAction(request);
 
 export default function MoviePage() {
   const movie = useLoaderData<typeof loader>();

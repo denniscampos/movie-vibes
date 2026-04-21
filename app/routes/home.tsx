@@ -2,17 +2,10 @@ import { ActionFunctionArgs, LoaderFunctionArgs, type MetaFunction } from "react
 import { redirect, useLoaderData } from "react-router";
 import { useState } from "react";
 import { usernameCookie } from "utils/cookies";
-import { z } from "zod";
 import { Button } from "~/components/ui/button";
 import { UpcomingMovies } from "~/components/UpcomingMovies";
-import { MovieStatus } from "~/lib/status";
-import {
-  changeMovieStatus,
-  fetchUpcomingMovies,
-  removeMovies,
-  saveToDB,
-  updateMovie,
-} from "~/models/movie.server";
+import { handleMovieAction } from "~/actions/movie.server";
+import { fetchUpcomingMovies } from "~/models/movie.server";
 
 export const meta: MetaFunction = () => {
   return [
@@ -20,13 +13,6 @@ export const meta: MetaFunction = () => {
     { name: "description", content: "Vibe with yo friends." },
   ];
 };
-
-const updateMovieSchema = z.object({
-  movieName: z.string().min(1, { message: "Movie name is required" }),
-  releaseDate: z.string().min(1, { message: "Release date is required" }),
-  selectedBy: z.string().min(1, { message: "Selected by is required" }),
-  categoryName: z.string().min(1, { message: "Category name is required" }),
-});
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const cookieHeader = request.headers.get("Cookie");
@@ -43,55 +29,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   };
 };
 
-export const action = async ({ request }: ActionFunctionArgs) => {
-  const body = await request.formData();
-  const movieId = body.get("movieId") as string;
-  const movieStatus = body.get("movieStatus") as MovieStatus;
-
-  const action = body.get("_action");
-
-  const movieTitle = body.get("movieTitle") as string;
-  const movieReleaseDate = body.get("movieReleaseDate") as string;
-
-  if (action === "movieStatus") {
-    await changeMovieStatus({ id: movieId, status: movieStatus });
-
-    return { message: "Movie status updated" };
-  }
-
-  if (action === "create") {
-    await saveToDB({ movieName: movieTitle, releaseDate: movieReleaseDate });
-    return redirect("/movies");
-  }
-
-  if (action === "update") {
-    const movieId = body.get("movieId") as string;
-    const movieName = body.get("movieName") as string;
-    const releaseDate = body.get("releaseDate") as string;
-    const selectedBy = body.get("selectedBy") as string;
-    const categoryName = body.get("categoryName") as string;
-
-    try {
-      const parseData = updateMovieSchema.parse({
-        movieName,
-        releaseDate,
-        selectedBy,
-        categoryName,
-      });
-
-      const updatedMovie = await updateMovie({ ...parseData, movieId });
-      return { updatedMovie };
-    } catch (error) {
-      return { error };
-    }
-  }
-
-  if (action === "destroy") {
-    const movieId = body.get("movieId") as string;
-    await removeMovies(movieId.split(","));
-    return { success: true };
-  }
-};
+export const action = ({ request }: ActionFunctionArgs) => handleMovieAction(request);
 
 export default function Index() {
   const loaderData = useLoaderData<typeof loader>();
