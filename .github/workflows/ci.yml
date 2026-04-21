@@ -27,3 +27,53 @@ jobs:
         env:
           DATABASE_URL: postgresql://fake:fake@localhost:5432/fake
       - run: pnpm test run
+
+  e2e:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: movie_vibes
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/movie_vibes?schema=public
+      TMDB_API_URL: https://api.themoviedb.org/3
+      TMDB_API_TOKEN: ${{ secrets.TMDB_API_TOKEN }}
+      TMDB_API_IMAGE_URL: https://image.tmdb.org/t/p/w1280
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm exec prisma migrate deploy
+
+      - run: pnpm exec prisma generate
+
+      - run: pnpm exec playwright install --with-deps chromium
+
+      - run: pnpm test:e2e
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
