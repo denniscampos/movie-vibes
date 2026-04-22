@@ -1,6 +1,5 @@
 import {
   Link,
-  redirect,
   useLoaderData,
   ActionFunctionArgs,
   LoaderFunctionArgs,
@@ -10,16 +9,11 @@ import { DataTable } from "~/components/DataTable";
 import { buttonVariants } from "~/components/ui/button";
 import { fetchMovies } from "~/models/movie.server";
 import { columns } from "~/components/Columns";
-import { usernameCookie } from "utils/cookies";
+import { requireLogin } from "~/utils/auth.server";
 import { handleMovieAction } from "~/actions/movie.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const cookieHeader = request.headers.get("Cookie");
-  const userVisited = (await usernameCookie.parse(cookieHeader)) || false;
-
-  if (!userVisited) {
-    return redirect("/login");
-  }
+  await requireLogin(request);
 
   const movies = await fetchMovies();
 

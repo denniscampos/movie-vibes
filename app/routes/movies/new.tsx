@@ -10,7 +10,7 @@ import {
 import { Loader2 } from "lucide-react";
 import { FieldValues } from "react-hook-form";
 import { useRemixForm, getValidatedFormData } from "remix-hook-form";
-import { usernameCookie } from "utils/cookies";
+import { requireLogin } from "~/utils/auth.server";
 import { z } from "zod";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -41,12 +41,7 @@ type MovieSchema = z.infer<typeof createMovieSchema>;
 const resolver = zodResolver(createMovieSchema);
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const cookieHeader = request.headers.get("Cookie");
-  const userVisited = (await usernameCookie.parse(cookieHeader)) || false;
-
-  if (!userVisited) {
-    return redirect("/login");
-  }
+  await requireLogin(request);
 
   const url = new URL(request.url);
   const searchQuery = url.searchParams.get("q");

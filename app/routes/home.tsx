@@ -1,7 +1,6 @@
-import { ActionFunctionArgs, LoaderFunctionArgs, type MetaFunction } from "react-router";
-import { redirect, useLoaderData } from "react-router";
+import { ActionFunctionArgs, LoaderFunctionArgs, type MetaFunction, useLoaderData } from "react-router";
 import { useState } from "react";
-import { usernameCookie } from "utils/cookies";
+import { requireLogin } from "~/utils/auth.server";
 import { Button } from "~/components/ui/button";
 import { UpcomingMovies } from "~/components/UpcomingMovies";
 import { handleMovieAction } from "~/actions/movie.server";
@@ -15,12 +14,7 @@ export const meta: MetaFunction = () => {
 };
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const cookieHeader = request.headers.get("Cookie");
-  const userVisited = (await usernameCookie.parse(cookieHeader)) || false;
-
-  if (!userVisited) {
-    return redirect("/login");
-  }
+  await requireLogin(request);
 
   const upcomingMovies = await fetchUpcomingMovies();
 
