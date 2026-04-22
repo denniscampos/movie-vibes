@@ -1,1 +1,1 @@
-export const users = ["dnbull", "lumster", "mon-ster", "shway", "schwaj"];
+export const users = ["dnbull", "lumster", "mon-ster", "shway", "schwaj", "tester"];
