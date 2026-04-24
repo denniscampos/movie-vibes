@@ -53,6 +53,7 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
 };
 
 export const action = async ({ request }: Route.ActionArgs) => {
+  await requireLogin(request);
   const { receivedValues, errors, data } = await getValidatedFormData<MovieSchema>(
     request,
     resolver,

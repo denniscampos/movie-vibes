@@ -12,7 +12,7 @@ export const meta: Route.MetaFunction = () => [
 ];
 
 export const loader = async ({ request }: Route.LoaderArgs) => {
-  await requireLogin(request);
+  const username = await requireLogin(request);
   const upcomingMovies = await fetchUpcomingMovies();
   return { upcomingMovies };
 };
@@ -130,9 +130,7 @@ function SoloCallout({ name }: { name: string }) {
       <div className="mb-2 font-mono text-[11px] uppercase tracking-[0.16em] text-muted">
         only one on the wheel
       </div>
-      <div className="my-3 font-hand-2 text-[48px] leading-none text-accent">
-        {name}
-      </div>
+      <div className="my-3 font-hand-2 text-[48px] leading-none text-accent">{name}</div>
       <div className="font-hand text-[15px] text-ink-soft">
         You&apos;re up by default. No pressure.
       </div>
