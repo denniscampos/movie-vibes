@@ -12,7 +12,7 @@ export const meta: Route.MetaFunction = () => [
 ];
 
 export const loader = async ({ request }: Route.LoaderArgs) => {
-  const username = await requireLogin(request);
+  await requireLogin(request);
   const upcomingMovies = await fetchUpcomingMovies();
   return { upcomingMovies };
 };
