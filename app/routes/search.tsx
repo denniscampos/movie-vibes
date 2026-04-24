@@ -9,6 +9,7 @@ import { searchMovie } from "services/tmdb";
 import { handleMovieAction } from "~/actions/movie.server";
 import { Button, Field, Poster } from "~/components/mv";
 import { SaveMovieButton } from "~/components/SaveMovieButton";
+import { requireLogin } from "~/utils/auth.server";
 import type { Route } from "./+types/search";
 
 type SearchItem = {
@@ -19,6 +20,7 @@ type SearchItem = {
 };
 
 export const loader = async ({ request }: Route.LoaderArgs) => {
+  await requireLogin(request);
   const url = new URL(request.url);
   const q = url.searchParams.get("q") ?? "";
   const searchResults = q ? await searchMovie(q) : [];

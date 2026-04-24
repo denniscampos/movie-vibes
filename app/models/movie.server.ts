@@ -113,11 +113,13 @@ export const saveToDB = async ({
   releaseDate,
   imageUrl,
   tmdbId,
+  selectedBy,
 }: {
   movieName: string;
   releaseDate: string;
   imageUrl?: string;
   tmdbId?: number;
+  selectedBy: string;
 }) => {
   const getYear = releaseDate.split("-")[0];
   return db.movie.create({
@@ -133,7 +135,7 @@ export const saveToDB = async ({
       },
       imageUrl,
       status: MovieStatus.NOT_WATCHED,
-      selectedBy: "",
+      selectedBy: selectedBy,
     },
   });
 };

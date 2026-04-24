@@ -3,9 +3,11 @@ import { searchMovieById } from "services/tmdb";
 import { handleMovieAction } from "~/actions/movie.server";
 import { SaveMovieButton } from "~/components/SaveMovieButton";
 import { Chip, Poster } from "~/components/mv";
+import { requireLogin } from "~/utils/auth.server";
 import type { Route } from "./+types/movie";
 
-export const loader = async ({ params }: Route.LoaderArgs) => {
+export const loader = async ({ params, request }: Route.LoaderArgs) => {
+  await requireLogin(request);
   const movieId = String(params.id);
   const movie = await searchMovieById(movieId);
   return movie;

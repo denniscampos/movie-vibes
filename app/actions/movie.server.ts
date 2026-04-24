@@ -7,6 +7,7 @@ import {
   saveToDB,
   updateMovie,
 } from "~/models/movie.server";
+import { requireLogin } from "~/utils/auth.server";
 
 const updateMovieSchema = z.object({
   movieName: z.string().min(1, { message: "Movie name is required" }),
@@ -16,6 +17,7 @@ const updateMovieSchema = z.object({
 });
 
 export async function handleMovieAction(request: Request) {
+  const username = await requireLogin(request);
   const body = await request.formData();
   const action = body.get("_action");
 
@@ -57,6 +59,6 @@ export async function handleMovieAction(request: Request) {
     typeof tmdbIdRaw === "string" && tmdbIdRaw.trim() !== ""
       ? Number(tmdbIdRaw)
       : undefined;
-  await saveToDB({ movieName, releaseDate, imageUrl, tmdbId });
+  await saveToDB({ movieName, releaseDate, imageUrl, tmdbId, selectedBy: username });
   return redirect("/movies");
 }
