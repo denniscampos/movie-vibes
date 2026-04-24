@@ -1,14 +1,18 @@
-import { href, Link, LoaderFunctionArgs, useLoaderData } from "react-router";
+import { href, Link } from "react-router";
 import {
+  getGenreList,
   getNewReleases,
   getPopularMoviesByGenre,
   getRecommendedMovies,
-  getGenreList,
 } from "services/tmdb";
-import { MovieAPIResponse } from "types/movie";
-import { MoviePoster } from "~/components/MoviePoster";
+import type { MovieAPIResponse } from "types/movie";
+import { Poster } from "~/components/mv";
+import { requireLogin } from "~/utils/auth.server";
+import type { Route } from "./+types/genreId";
 
-export const loader = async ({ params }: LoaderFunctionArgs) => {
+export const loader = async ({ request, params }: Route.LoaderArgs) => {
+  await requireLogin(request);
+
   const genreId = String(params.genreId);
   const genres = await getGenreList();
   const genre = genres.find((g) => String(g.id) === genreId);
@@ -19,75 +23,85 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
     getRecommendedMovies({ genreId: Number(genreId) }),
   ]);
 
+  const aisleNumber = genre
+    ? genres.findIndex((g) => g.id === genre.id) + 1
+    : 0;
+
   return {
     movies,
     newReleases,
     recommendedMovies,
     genreName: genre?.name ?? "Movies",
+    aisleNumber,
   };
 };
 
-export default function MovieCategoryPage() {
-  const loaderData = useLoaderData<typeof loader>();
-  const movies = loaderData.movies;
-  const newReleases = loaderData.newReleases;
-  const recommendedMovies = loaderData.recommendedMovies;
-  const genreName = loaderData.genreName;
+export default function MovieCategoryPage({ loaderData }: Route.ComponentProps) {
+  const { movies, newReleases, recommendedMovies, genreName, aisleNumber } =
+    loaderData;
 
   return (
-    <div className="space-y-12 pt-12">
-      <h1 className="text-3xl font-bold mb-8">{genreName}</h1>
+    <div className="py-10">
+      <Link
+        to={href("/browse")}
+        className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted hover:text-ink"
+      >
+        ← back to aisle directory
+      </Link>
 
-      {/*POPULAR SECTION */}
-      <section>
-        <h2 className="text-2xl font-bold mb-6">Popular Movies</h2>
-        <div className="relative">
-          <div className="flex overflow-x-auto gap-6 pb-4 snap-x snap-mandatory">
-            {movies.map((movie: MovieAPIResponse) => (
-              <Link to={href(`/movies/:id`, { id: movie.id.toString() })} key={movie.id}>
-                <div className="flex-none w-[200px] snap-start">
-                  <MoviePoster src={movie.poster_path} alt={movie.title} />
-                  <h3 className="mt-2 text-sm font-medium line-clamp-2">{movie.title}</h3>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
+      <div className="mb-[6px] mt-5 font-mono text-[11px] uppercase tracking-[0.14em] text-accent">
+        {aisleNumber > 0
+          ? `▸ aisle a${aisleNumber} · full shelf`
+          : "▸ full shelf"}
+      </div>
+      <h1 className="m-0 mb-8 font-hand-2 text-[40px] text-ink">{genreName}</h1>
 
-      {/* NEW RELEASES SECTION */}
-      <section>
-        <h2 className="text-2xl font-bold mb-6">New Releases</h2>
-        <div className="relative">
-          <div className="flex overflow-x-auto gap-6 pb-4 snap-x snap-mandatory">
-            {newReleases.map((movie: MovieAPIResponse) => (
-              <Link to={href(`/movies/:id`, { id: movie.id.toString() })} key={movie.id}>
-                <div className="flex-none w-[200px] snap-start">
-                  <MoviePoster src={movie.poster_path} alt={movie.title} />
-                  <h3 className="mt-2 text-sm font-medium line-clamp-2">{movie.title}</h3>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* RECOMMENDED SECTION */}
-      <section>
-        <h2 className="text-2xl font-bold mb-6">Recommended Movies</h2>
-        <div className="relative">
-          <div className="flex overflow-x-auto gap-6 pb-4 snap-x snap-mandatory">
-            {recommendedMovies.map((movie: MovieAPIResponse) => (
-              <Link to={href(`/movies/:id`, { id: movie.id.toString() })} key={movie.id}>
-                <div className="flex-none w-[200px] snap-start">
-                  <MoviePoster src={movie.poster_path} alt={movie.title} />
-                  <h3 className="mt-2 text-sm font-medium line-clamp-2">{movie.title}</h3>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
+      <Shelf label="Popular" movies={movies} />
+      <Shelf label="New Releases" movies={newReleases} />
+      <Shelf label="Staff Recommendations" movies={recommendedMovies} />
     </div>
+  );
+}
+
+function Shelf({ label, movies }: { label: string; movies: MovieAPIResponse[] }) {
+  if (!movies || movies.length === 0) return null;
+  return (
+    <section className="mb-10">
+      <div className="mb-4 flex items-baseline justify-between border-b-2 border-dashed border-rule pb-2">
+        <h2 className="m-0 font-hand-2 text-2xl text-ink">{label}</h2>
+        <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted">
+          {movies.length} on the shelf
+        </span>
+      </div>
+      <div className="-mx-1 flex snap-x snap-mandatory gap-[18px] overflow-x-auto px-1 pb-4">
+        {movies.map((m, i) => {
+          const year = m.release_date?.split("-")[0];
+          return (
+            <Link
+              key={m.id}
+              to={href("/movies/:id", { id: String(m.id) })}
+              className="flex w-[160px] flex-none snap-start flex-col gap-[6px]"
+            >
+              <Poster
+                movie={{
+                  id: String(m.id),
+                  title: m.title,
+                  year,
+                  posterUrl: m.poster_path ?? undefined,
+                }}
+                tilt={i % 2 ? 0.6 : -0.6}
+                size="md"
+              />
+              <div className="font-hand-2 text-[13px] leading-[1.1] text-ink">
+                {m.title}
+              </div>
+              <div className="font-mono text-[10px] uppercase tracking-[0.06em] text-muted">
+                {year ?? "—"}
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+    </section>
   );
 }

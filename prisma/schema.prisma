@@ -15,6 +15,7 @@ datasource db {
 
 model Movie {
   id          String  @id @default(cuid())
+  tmdbId      Int?
   movieName   String
   // we just need the year no need for actual dates
   releaseDate String
@@ -29,6 +30,8 @@ model Movie {
   category   Category @relation(fields: [categoryId], references: [id])
 
   status MovieStatus @default(NOT_WATCHED)
+
+  @@index([tmdbId])
 }
 
 model Category {

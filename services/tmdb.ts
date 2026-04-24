@@ -1,5 +1,7 @@
-import { Genre, MovieAPIResponse } from "types/movie";
+import { Genre, MovieAPIResponse, MovieDetailResponse } from "types/movie";
 import { genreCache, releaseCache, recommendedCache } from "~/lib/cache";
+
+type CrewMember = { job: string; name: string };
 
 function withImageUrl(poster_path: string | null): string | null {
   return poster_path ? `${process.env.TMDB_API_IMAGE_URL}${poster_path}` : null;
@@ -35,14 +37,17 @@ export async function searchMovie(query: string) {
   return [];
 }
 
-export async function searchMovieById(id?: string) {
-  const res = await fetch(`${process.env.TMDB_API_URL}/movie/${id}?language=en-US`, {
-    method: "GET",
-    headers: {
-      accept: "application/json",
-      Authorization: `Bearer ${process.env.TMDB_API_TOKEN}`,
+export async function searchMovieById(id?: string): Promise<MovieDetailResponse> {
+  const res = await fetch(
+    `${process.env.TMDB_API_URL}/movie/${id}?language=en-US&append_to_response=credits`,
+    {
+      method: "GET",
+      headers: {
+        accept: "application/json",
+        Authorization: `Bearer ${process.env.TMDB_API_TOKEN}`,
+      },
     },
-  });
+  );
 
   if (!res.ok) {
     throw new Error(`Failed to fetch movie id ${id}`);
@@ -50,15 +55,23 @@ export async function searchMovieById(id?: string) {
 
   const data = await res.json();
 
-  const result: MovieAPIResponse = {
+  const directors: string[] = (data.credits?.crew ?? [])
+    .filter((c: CrewMember) => c.job === "Director")
+    .map((c: CrewMember) => c.name);
+
+  return {
     id: data.id,
     title: data.title,
     release_date: data.release_date,
     poster_path: withImageUrl(data.poster_path),
     overview: data.overview,
+    tagline: data.tagline || null,
+    runtime: typeof data.runtime === "number" ? data.runtime : null,
+    genres: Array.isArray(data.genres) ? data.genres : [],
+    director: directors.length > 0 ? directors.join(", ") : null,
+    vote_average: typeof data.vote_average === "number" ? data.vote_average : 0,
+    vote_count: typeof data.vote_count === "number" ? data.vote_count : 0,
   };
-
-  return result;
 }
 
 export async function searchMoviesByGenre({ genre }: { genre: Genre }) {

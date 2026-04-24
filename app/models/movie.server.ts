@@ -36,6 +36,7 @@ export const fetchUpcomingMovies = async () => {
     },
     select: {
       id: true,
+      tmdbId: true,
       movieName: true,
       releaseDate: true,
       selectedBy: true,
@@ -59,6 +60,7 @@ export const createMovie = async ({
   categoryName,
   status,
   imageUrl,
+  tmdbId,
 }: {
   movieName: string;
   releaseDate: string;
@@ -66,6 +68,7 @@ export const createMovie = async ({
   categoryName: string;
   status: MovieStatus;
   imageUrl?: string;
+  tmdbId?: number;
 }) => {
   return db.movie.create({
     data: {
@@ -79,6 +82,7 @@ export const createMovie = async ({
       selectedBy,
       status,
       imageUrl,
+      tmdbId,
     },
   });
 };
@@ -108,16 +112,19 @@ export const saveToDB = async ({
   movieName,
   releaseDate,
   imageUrl,
+  tmdbId,
 }: {
   movieName: string;
   releaseDate: string;
   imageUrl?: string;
+  tmdbId?: number;
 }) => {
   const getYear = releaseDate.split("-")[0];
   return db.movie.create({
     data: {
       movieName,
       releaseDate: getYear,
+      tmdbId,
       // everything below will be empty since the goal is to update the movie later
       category: {
         create: {
