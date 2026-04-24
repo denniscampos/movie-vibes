@@ -52,6 +52,11 @@ export async function handleMovieAction(request: Request) {
   const movieName = body.get("movieTitle") as string;
   const releaseDate = body.get("movieReleaseDate") as string;
   const imageUrl = (body.get("imageUrl") as string) || undefined;
-  await saveToDB({ movieName, releaseDate, imageUrl });
+  const tmdbIdRaw = body.get("tmdbId");
+  const tmdbId =
+    typeof tmdbIdRaw === "string" && tmdbIdRaw.trim() !== ""
+      ? Number(tmdbIdRaw)
+      : undefined;
+  await saveToDB({ movieName, releaseDate, imageUrl, tmdbId });
   return redirect("/movies");
 }

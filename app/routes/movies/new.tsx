@@ -1,46 +1,45 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  ActionFunctionArgs,
-  LoaderFunctionArgs,
-  redirect,
-  Form,
-  useNavigation,
-  useFetcher,
-} from "react-router";
 import { Loader2 } from "lucide-react";
-import { FieldValues } from "react-hook-form";
-import { useRemixForm, getValidatedFormData } from "remix-hook-form";
-import { requireLogin } from "~/utils/auth.server";
-import { z } from "zod";
-import { Button } from "~/components/ui/button";
-import { Input } from "~/components/ui/input";
-import { Label } from "~/components/ui/label";
+import { useEffect, useState } from "react";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
+  Form,
+  href,
+  Link,
+  redirect,
+  useFetcher,
+  useNavigation,
+} from "react-router";
+import { getValidatedFormData, useRemixForm } from "remix-hook-form";
+import { searchMovie } from "services/tmdb";
+import { z } from "zod";
+import { Button, Field, Poster, Select } from "~/components/mv";
+import { cn } from "~/lib/utils";
 import { MovieStatus } from "~/lib/status";
 import { createMovie } from "~/models/movie.server";
-import { searchMovie } from "services/tmdb";
-import { useEffect, useState } from "react";
-import { MoviePoster } from "~/components/MoviePoster";
+import { requireLogin } from "~/utils/auth.server";
+import type { Route } from "./+types/new";
+
+type SearchResult = {
+  id: number;
+  title: string;
+  release_date: string;
+  poster_path: string | null;
+};
 
 const createMovieSchema = z.object({
   movieName: z.string().min(1, { message: "Movie name is required" }),
-  releaseDate: z.string().min(1, { message: "Release date is required" }),
-  selectedBy: z.string().min(1, { message: "Selected by is required" }),
-  categoryName: z.string().min(1, { message: "Category name is required" }),
+  releaseDate: z.string().min(1, { message: "Release year is required" }),
+  selectedBy: z.string().min(1, { message: "Picker is required" }),
+  categoryName: z.string().min(1, { message: "Category is required" }),
   status: z.nativeEnum(MovieStatus),
   imageUrl: z.string().optional(),
+  tmdbId: z.string().optional(),
 });
 
 type MovieSchema = z.infer<typeof createMovieSchema>;
 const resolver = zodResolver(createMovieSchema);
 
-export const loader = async ({ request }: LoaderFunctionArgs) => {
+export const loader = async ({ request }: Route.LoaderArgs) => {
   await requireLogin(request);
 
   const url = new URL(request.url);
@@ -50,21 +49,28 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const searchResults = await searchMovie(searchQuery);
     return { searchResults };
   }
-
-  return { searchResults: [] };
+  return { searchResults: [] as SearchResult[] };
 };
 
-export const action = async ({ request }: ActionFunctionArgs) => {
+export const action = async ({ request }: Route.ActionArgs) => {
   const { receivedValues, errors, data } = await getValidatedFormData<MovieSchema>(
     request,
-    resolver
+    resolver,
   );
 
   if (errors) {
     return { errors, receivedValues };
   }
 
-  const { movieName, categoryName, releaseDate, selectedBy, status, imageUrl } = data;
+  const {
+    movieName,
+    categoryName,
+    releaseDate,
+    selectedBy,
+    status,
+    imageUrl,
+    tmdbId,
+  } = data;
 
   await createMovie({
     movieName,
@@ -73,23 +79,20 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     categoryName,
     status,
     imageUrl,
+    tmdbId: tmdbId ? Number(tmdbId) : undefined,
   });
 
-  return redirect(`/movies`);
+  return redirect(href("/movies"));
 };
 
 export default function MoviesCreatePage() {
   const navigation = useNavigation();
-  const loading = navigation.state === "loading";
-  const [searchResults, setSearchResults] = useState<
-    Array<{ id: number; title: string; releaseDate: string; posterPath: string | null }>
-  >([]);
-  const [selectedMovie, setSelectedMovie] = useState<{
-    posterPath: string | null;
-    releaseDate: string;
-  } | null>(null);
+  const submitting = navigation.state !== "idle";
+
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [selectedMovie, setSelectedMovie] = useState<SearchResult | null>(null);
   const [isSearching, setIsSearching] = useState(false);
-  const searchFetcher = useFetcher();
+  const searchFetcher = useFetcher<{ searchResults: SearchResult[] }>();
 
   const {
     register,
@@ -112,21 +115,26 @@ export default function MoviesCreatePage() {
 
   const movieName = watch("movieName");
 
+  // Debounced TMDB search. Skips when the typed name matches the last-picked
+  // suggestion so the dropdown doesn't re-open after a selection.
   useEffect(() => {
     if (!movieName || movieName.length <= 2) {
       setSearchResults([]);
       return;
     }
-
-    const handler = setTimeout(() => {
+    if (selectedMovie && selectedMovie.title === movieName) {
+      return;
+    }
+    const handler = window.setTimeout(() => {
       setIsSearching(true);
-      searchFetcher.submit({ q: movieName }, { method: "get", action: "/movies/new" });
+      searchFetcher.submit(
+        { q: movieName },
+        { method: "get", action: href("/movies/new") },
+      );
     }, 500);
-
-    return () => clearTimeout(handler);
-    // ignoring searchFetcher because it will end up in a infinite loop
+    return () => window.clearTimeout(handler);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [movieName]);
+  }, [movieName, selectedMovie]);
 
   useEffect(() => {
     if (searchFetcher.data?.searchResults) {
@@ -135,166 +143,157 @@ export default function MoviesCreatePage() {
     }
   }, [searchFetcher.data]);
 
-  const handleMovieSelect = (movie: {
-    title: string;
-    releaseDate: string;
-    posterPath: string | null;
-  }) => {
+  const handleMovieSelect = (movie: SearchResult) => {
+    const year = movie.release_date?.split("-")[0] ?? "";
     setValue("movieName", movie.title);
-    setValue("releaseDate", movie.releaseDate);
-    setValue("imageUrl", movie.posterPath || "");
-    setSelectedMovie({ posterPath: movie.posterPath, releaseDate: movie.releaseDate });
+    setValue("releaseDate", year);
+    setValue("imageUrl", movie.poster_path ?? "");
+    setValue("tmdbId", String(movie.id));
+    setSelectedMovie(movie);
     setSearchResults([]);
   };
 
+  const showSuggestions =
+    searchResults.length > 0 &&
+    !(selectedMovie && selectedMovie.title === movieName);
+
   return (
-    <div className="container mx-auto px-4 min-h-screen flex items-start bg-transparent py-16">
-      <div className="w-full px-4">
-        <h1 className="text-2xl sm:text-4xl font-bold mb-10">Add New Movie</h1>
-        <Form method="POST" onSubmit={handleSubmit} className="space-y-8">
-          <Input type="hidden" {...register("imageUrl")} />
-          <div className="space-y-2">
-            <Label htmlFor="movieName" className="text-base">
-              Movie Name
-            </Label>
+    <div className="py-10">
+      <div className="mb-[6px] font-mono text-[10px] uppercase tracking-[0.14em] text-muted">
+        step 1 of 1 · any vibe welcome
+      </div>
+      <h1 className="m-0 mb-6 font-hand-2 text-4xl text-ink">Add a movie</h1>
+
+      <Form method="POST" onSubmit={handleSubmit}>
+        <div className="grid gap-6 md:grid-cols-[1fr_180px]">
+          <div className="flex flex-col gap-4">
+            <input type="hidden" {...register("imageUrl")} />
+            <input type="hidden" {...register("tmdbId")} />
+
             <div className="relative">
-              <Input
+              <Field
                 {...register("movieName")}
-                id="movieName"
-                name="movieName"
-                type="text"
-                placeholder="Enter movie name"
-                className="h-12 text-base pr-10"
+                label="Movie name"
+                placeholder="type a movie title..."
+                autoComplete="off"
+                error={errors.movieName?.message}
               />
               {isSearching && (
-                <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                  <Loader2 className="h-5 w-5 animate-spin" />
+                <div className="pointer-events-none absolute right-[14px] top-[32px]">
+                  <Loader2 className="size-4 animate-spin text-muted" />
+                </div>
+              )}
+              {showSuggestions && (
+                <div className="absolute z-10 mt-[6px] w-full overflow-hidden rounded-[4px] border-2 border-ink-line bg-card">
+                  {searchResults.map((movie, i) => (
+                    <button
+                      key={movie.id}
+                      type="button"
+                      onClick={() => handleMovieSelect(movie)}
+                      className={cn(
+                        "flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-paper",
+                        i < searchResults.length - 1 &&
+                          "border-b border-dashed border-rule",
+                      )}
+                    >
+                      {movie.poster_path ? (
+                        <img
+                          src={movie.poster_path}
+                          alt=""
+                          className="h-[42px] w-[28px] flex-none object-cover"
+                        />
+                      ) : (
+                        <div className="h-[42px] w-[28px] flex-none border border-dashed border-rule bg-paper-2" />
+                      )}
+                      <div>
+                        <div className="font-hand-2 text-[14px] leading-tight text-ink">
+                          {movie.title}
+                        </div>
+                        <div className="font-mono text-[10px] text-muted">
+                          ({movie.release_date?.split("-")[0] ?? "—"})
+                        </div>
+                      </div>
+                    </button>
+                  ))}
                 </div>
               )}
             </div>
-            {searchResults.length > 0 && (
-              <div className="absolute z-10 mt-1 w-full bg-white rounded-md shadow-lg max-h-60 overflow-auto">
-                {searchResults.map((movie) => (
-                  <button
-                    key={movie.id}
-                    type="button"
-                    className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-3"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleMovieSelect(movie);
-                    }}
-                  >
-                    {movie.posterPath && (
-                      <img
-                        src={movie.posterPath}
-                        alt={movie.title}
-                        className="w-10 h-15 object-cover rounded"
-                      />
-                    )}
-                    <div>
-                      <div className="font-medium">{movie.title}</div>
-                      <div className="text-sm text-gray-500">{movie.releaseDate}</div>
-                    </div>
-                  </button>
-                ))}
+
+            <Field
+              {...register("releaseDate")}
+              label="Release year"
+              placeholder="2010"
+              error={errors.releaseDate?.message}
+            />
+
+            <Field
+              {...register("selectedBy")}
+              label="Who's picking?"
+              placeholder="enter a name"
+              error={errors.selectedBy?.message}
+            />
+
+            <Field
+              {...register("categoryName")}
+              label="Category"
+              placeholder="enter a category"
+              error={errors.categoryName?.message}
+            />
+
+            <Select
+              {...register("status")}
+              label="Status"
+              options={[
+                { value: MovieStatus.UPCOMING, label: "Upcoming" },
+                { value: MovieStatus.WATCHED, label: "Watched" },
+                { value: MovieStatus.NOT_WATCHED, label: "Not watched" },
+              ]}
+              error={errors.status?.message}
+            />
+
+            <div className="mt-3 flex justify-end gap-[10px]">
+              <Link to={href("/")}>
+                <Button type="button">Cancel</Button>
+              </Link>
+              <Button variant="primary" type="submit" disabled={submitting}>
+                {submitting ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  "Add movie →"
+                )}
+              </Button>
+            </div>
+          </div>
+
+          <div>
+            {selectedMovie ? (
+              <div className="flex flex-col gap-2">
+                <Poster
+                  movie={{
+                    id: String(selectedMovie.id),
+                    title: selectedMovie.title,
+                    year: selectedMovie.release_date?.split("-")[0],
+                    posterUrl: selectedMovie.poster_path ?? undefined,
+                  }}
+                  size="md"
+                />
+                <div className="font-hand-2 text-[14px] leading-tight text-ink">
+                  {selectedMovie.title}
+                </div>
+                <div className="font-mono text-[10px] text-muted">
+                  {selectedMovie.release_date?.split("-")[0] ?? "—"}
+                </div>
+              </div>
+            ) : (
+              <div className="flex aspect-[2/3] w-[140px] items-center justify-center rounded-[4px] border-2 border-dashed border-rule p-[10px] text-center font-mono text-[10px] uppercase leading-[1.4] tracking-[0.1em] text-muted">
+                poster
+                <br />
+                preview
               </div>
             )}
-            <p className="text-red-500 text-sm">
-              {errors.movieName && errors.movieName.message}
-            </p>
           </div>
-
-          {selectedMovie && (
-            <div className="w-48">
-              <MoviePoster src={selectedMovie.posterPath} alt={watch("movieName")} />
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <Label htmlFor="releaseDate" className="text-base">
-              Release Date (YYYY)
-            </Label>
-            <Input
-              {...register("releaseDate")}
-              id="releaseDate"
-              name="releaseDate"
-              type="text"
-              placeholder="2010"
-              className="h-12 text-base"
-            />
-            <p className="text-red-500 text-sm">
-              {errors.releaseDate && errors.releaseDate.message}
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="categoryName" className="text-base">
-              Category
-            </Label>
-            <Input
-              {...register("categoryName")}
-              id="categoryName"
-              name="categoryName"
-              type="text"
-              placeholder="Enter category"
-              className="h-12 text-base"
-            />
-            <p className="text-red-500 text-sm">
-              {errors.categoryName && errors.categoryName.message}
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="selectedBy" className="text-base">
-              Selected By
-            </Label>
-            <Input
-              {...register("selectedBy")}
-              id="selectedBy"
-              name="selectedBy"
-              type="text"
-              placeholder="Enter name"
-              className="h-12 text-base"
-            />
-            <p className="text-red-500 text-sm">
-              {errors.selectedBy && errors.selectedBy.message}
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-base">Movie Status</Label>
-            <SelectMovieStatus setValue={setValue} />
-            <p className="text-red-500 text-sm">
-              {errors.status && errors.status.message}
-            </p>
-          </div>
-
-          <div className="flex justify-end">
-            <Button
-              className="mt-4 h-12 text-base font-semibold px-8"
-              type="submit"
-              disabled={loading}
-            >
-              {loading ? <Loader2 className="animate-spin" /> : "Add Movie"}
-            </Button>
-          </div>
-        </Form>
-      </div>
+        </div>
+      </Form>
     </div>
-  );
-}
-
-function SelectMovieStatus({ setValue }: { setValue: FieldValues["setValue"] }) {
-  return (
-    <Select onValueChange={(value) => setValue("status", value)}>
-      <SelectTrigger className="h-12 text-base">
-        <SelectValue placeholder="Movie Status" />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="NOT_WATCHED">Not Watched</SelectItem>
-        <SelectItem value="UPCOMING">Upcoming</SelectItem>
-        <SelectItem value="WATCHED">Watched</SelectItem>
-      </SelectContent>
-    </Select>
   );
 }

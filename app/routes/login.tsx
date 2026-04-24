@@ -1,18 +1,11 @@
 import { compare } from "bcryptjs";
-import {
-  ActionFunctionArgs,
-  LoaderFunctionArgs,
-  Form,
-  redirect,
-  useActionData,
-} from "react-router";
-import { commitSession, getSession } from "~/utils/session.server";
-import { Button } from "~/components/ui/button";
-import { Input } from "~/components/ui/input";
-import { Label } from "~/components/ui/label";
+import { Form, redirect, useNavigation } from "react-router";
+import { Button, Field } from "~/components/mv";
 import { users } from "~/config/users";
+import { commitSession, getSession } from "~/utils/session.server";
+import type { Route } from "./+types/login";
 
-export const loader = async ({ request }: LoaderFunctionArgs) => {
+export const loader = async ({ request }: Route.LoaderArgs) => {
   const session = await getSession(request.headers.get("Cookie"));
   if (session.get("username")) {
     return redirect("/");
@@ -20,7 +13,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   return null;
 };
 
-export const action = async ({ request }: ActionFunctionArgs) => {
+export const action = async ({ request }: Route.ActionArgs) => {
   const formData = await request.formData();
   const username = formData.get("username")?.toString().toLowerCase();
   const password = formData.get("password")?.toString();
@@ -48,45 +41,53 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   });
 };
 
-export default function LoginPage() {
-  const actionData = useActionData<typeof action>();
+export default function LoginPage({ actionData }: Route.ComponentProps) {
+  const navigation = useNavigation();
+  const submitting = navigation.state === "submitting";
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center">
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold tracking-tight">Movie Vibes</h1>
-          <p className="text-muted-foreground mt-2 text-sm">What are we watching?</p>
+    <div className="flex min-h-[80vh] items-center justify-center px-5">
+      <div className="w-full max-w-sm rounded-organic border-2 border-ink-line bg-card p-8 shadow-ink-lg">
+        <div className="mb-7 text-center">
+          <div className="mb-[6px] font-mono text-[10px] uppercase tracking-[0.14em] text-muted">
+            members only · est. 2025
+          </div>
+          <h1 className="m-0 font-hand-2 text-[40px] leading-none text-ink">
+            Movie Vibes
+          </h1>
+          <p className="mt-2 font-hand text-[15px] text-ink-soft">
+            What are we watching?
+          </p>
         </div>
 
-        <Form method="post" className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="username">Username</Label>
-            <Input
-              id="username"
-              name="username"
-              type="text"
-              autoComplete="username"
-              autoFocus
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              name="password"
-              type="password"
-              autoComplete="current-password"
-            />
-          </div>
+        <Form method="post" className="flex flex-col gap-4">
+          <Field
+            id="username"
+            name="username"
+            type="text"
+            label="Username"
+            autoComplete="username"
+            autoFocus
+          />
+          <Field
+            id="password"
+            name="password"
+            type="password"
+            label="Password"
+            autoComplete="current-password"
+          />
 
           {actionData?.error && (
-            <p className="text-sm text-destructive">{actionData.error}</p>
+            <p className="font-hand text-[13px] text-destructive">{actionData.error}</p>
           )}
 
-          <Button type="submit" className="w-full">
-            Sign in
+          <Button
+            type="submit"
+            variant="primary"
+            className="mt-2 w-full justify-center"
+            disabled={submitting}
+          >
+            {submitting ? "Signing in..." : "Sign in →"}
           </Button>
         </Form>
       </div>
