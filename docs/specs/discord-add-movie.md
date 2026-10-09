@@ -107,7 +107,8 @@ Body (JSON array containing):
       "name": "title",
       "description": "Movie title to add",
       "type": 3,
-      "required": true
+      "required": true,
+      "autocomplete": true
     },
     {
       "name": "picked-by",
@@ -164,21 +165,29 @@ The endpoint receives a JSON interaction with a `type` field.
 | ------ | --------------------- | -------- |
 | `1`    | `PING` (health check) | `{ "type": 1 }` (PONG) — required for Discord to accept the endpoint URL |
 | `2`    | `APPLICATION_COMMAND` | Process command (below) |
+| `4`    | `APPLICATION_COMMAND_AUTOCOMPLETE` | `{ "type": 8, "data": { "choices": [...] } }` (see §8a) |
 
 Command handling order:
 
 1. **Verify signature** (§9). If invalid → respond `401`, do nothing.
 2. **PING** → PONG, return.
 3. **Authorize** the invoker/guild (§9). If not allowed → respond with a private/ephemeral message (flags `64`) saying the command isn't available.
-4. Extract `title`; call `searchMovie(title)`.
-5. **No results** → ephemeral reply: `Couldn't find a movie matching "<title>".`
-6. **Results** → take the **first result** (best match; `searchMovie` returns TMDB relevance order).
+4. Extract `title`. If it is a picked suggestion (`tmdb:<id>`, §8a), fetch that movie with `searchMovieById(id)`; otherwise call `searchMovie(title)`.
+5. **No results** → ephemeral reply: `Couldn't find a movie matching "<title>". Check the spelling, or pick from the suggestions that appear as you type.`
+6. **Results** → take the best-ranked result: exact title matches first (ignoring case, punctuation, accents and `&`/`and`; most-voted first), then TMDB relevance order.
 7. **Duplicate check** → look up an existing movie by the matched `tmdbId` **before** inserting. If one already exists, do **not** write; reply ephemeral: `This movie already exists.` (§7a).
 8. Build the field mapping (§7), call `createMovie(...)`.
    - Include the matched title + year in the confirmation so the user can spot a wrong match.
 9. **Success** → reply with a confirmation message (type `4`), e.g.
    `Added **The Last Dragon (1985)** to Movie Vibes — picked by @someone.`
 10. **Error** (TMDB/db failure) → ephemeral reply with a short error; do not leak stack traces.
+
+### 8a. Title autocomplete
+
+The `title` option has `autocomplete: true`. While the user types, Discord sends type `4` interactions; the handler replies synchronously (type `8`, within 3 seconds) with up to 25 ranked TMDB matches named `Title (Year)` (max 100 characters) whose value is `tmdb:<id>`.
+
+- Fewer than 2 characters, an invoker outside the allowlist (§9), a TMDB error, or a search slower than 2.5 s → empty choices.
+- Picking a choice submits `tmdb:<id>`, so the exact movie is saved. Free text that ignores the suggestions falls back to search + ranking.
 
 ### Response visibility
 
@@ -253,7 +262,7 @@ TMDB vars already exist: `TMDB_API_URL`, `TMDB_API_TOKEN`, `TMDB_API_IMAGE_URL`.
 
 - **User Install → DMs & group DMs: implemented.** The command declares `integration_types: [0, 1]` and `contexts: [0, 1, 2]` (see §6) and is registered globally. DM / group-DM use requires the invoker to be in `DISCORD_ALLOWED_USER_IDS` (§9). The User Install toggle and install link in the Developer Portal remain manual.
 - Optional `category` / `status` command options.
-- Disambiguation: if multiple plausible matches, present a select menu (Component/Menu) before saving.
+- Disambiguation: covered by title autocomplete (§8a).
 
 ---
 

@@ -9,7 +9,7 @@ function withImageUrl(poster_path: string | null): string | null {
 
 export async function searchMovie(query: string) {
   const res = await fetch(
-    `${process.env.TMDB_API_URL}/search/movie?query=${query}&include_adult=false&language=en-US&page=1`,
+    `${process.env.TMDB_API_URL}/search/movie?query=${encodeURIComponent(query)}&include_adult=false&language=en-US&page=1`,
     {
       method: "GET",
       headers: {
@@ -31,6 +31,7 @@ export async function searchMovie(query: string) {
       title: movie.title,
       release_date: movie.release_date,
       poster_path: withImageUrl(movie.poster_path),
+      vote_count: movie.vote_count,
     }));
   }
 

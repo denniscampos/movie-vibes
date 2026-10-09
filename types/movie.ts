@@ -18,6 +18,7 @@ export type MovieAPIResponse = {
   release_date: string;
   poster_path: string | null;
   overview?: string;
+  vote_count?: number;
 };
 
 export type MovieDetailResponse = MovieAPIResponse & {

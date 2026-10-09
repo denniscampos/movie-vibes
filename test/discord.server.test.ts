@@ -263,7 +263,7 @@ describe("interactions route", () => {
     await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
     expect(mocks.findMovieByTmdbId).not.toHaveBeenCalled();
     expect(JSON.parse(fetchMock.mock.calls[1][1].body).content).toBe(
-      'Couldn\'t find a movie matching "Dune".',
+      'Couldn\'t find a movie matching "Dune". Check the spelling, or pick from the suggestions that appear as you type.',
     );
   });
 

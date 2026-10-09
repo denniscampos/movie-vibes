@@ -185,7 +185,6 @@ describe("interaction types", () => {
     const cases = [
       cmd({ data: { name: "other", options: [] } }),
       { ...cmd(), type: 3 },
-      { ...cmd(), type: 4 },
       { ...cmd(), type: 5 },
     ];
     for (const c of cases) {
@@ -298,7 +297,7 @@ describe("processing", () => {
     await run(cmd({}, [{ name: "title", type: 3, value: "  Nope  " }]));
     const { content } = await finalContent();
     expect(mocks.searchMovie).toHaveBeenCalledWith("Nope");
-    expect(content).toBe(`Couldn't find a movie matching "Nope".`);
+    expect(content).toBe(`Couldn't find a movie matching "Nope". Check the spelling, or pick from the suggestions that appear as you type.`);
     expect(mocks.findMovieByTmdbId).not.toHaveBeenCalled();
     expect(mocks.createMovie).not.toHaveBeenCalled();
   });

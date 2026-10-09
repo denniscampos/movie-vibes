@@ -45,6 +45,32 @@ describe("searchMovie", () => {
     ]);
   });
 
+  it("URL-encodes the query and passes vote_count through", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          results: [
+            {
+              id: 13804,
+              title: "Fast & Furious",
+              release_date: "2009-04-02",
+              poster_path: null,
+              vote_count: 8046,
+            },
+          ],
+        }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const results = await searchMovie("fast & furious #4");
+
+    const url = new URL(fetchMock.mock.calls[0][0]);
+    expect(url.searchParams.get("query")).toBe("fast & furious #4");
+    expect(url.searchParams.get("include_adult")).toBe("false");
+    expect(results[0].vote_count).toBe(8046);
+  });
+
   it("throws when the API returns an error", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false }));
 
