@@ -59,5 +59,3 @@ console.log(
     ? `Cleared guild commands for guild ${guildId}.`
     : "Guild commands were not cleared (DISCORD_GUILD_ID not set).",
 );
-
-export {};

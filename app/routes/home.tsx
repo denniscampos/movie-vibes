@@ -164,10 +164,14 @@ function DottedRule() {
 
 function ResultModal({ result, onClose }: { result: WheelName; onClose: () => void }) {
   return (
+    // Backdrop click-to-dismiss is a pointer convenience; keyboard users have the Close button.
+    // oxlint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
     <div
       className="fixed inset-0 z-500 flex items-center justify-center bg-black/70 px-4"
       onClick={onClose}
     >
+      {/* Only stops backdrop dismissal from firing; not an interactive control. */}
+      {/* oxlint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
       <div
         onClick={(e) => e.stopPropagation()}
         className="max-w-md rounded-[6px] border-[3px] border-accent bg-paper px-14 py-10 text-center shadow-ink-lg"

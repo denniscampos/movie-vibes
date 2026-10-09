@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Form,
   href,
@@ -90,10 +90,13 @@ export default function MoviesCreatePage() {
   const navigation = useNavigation();
   const submitting = navigation.state !== "idle";
 
-  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [selectedMovie, setSelectedMovie] = useState<SearchResult | null>(null);
-  const [isSearching, setIsSearching] = useState(false);
   const searchFetcher = useFetcher<{ searchResults: SearchResult[] }>();
+  // A response the user picked from or typed past; stays hidden until a new
+  // search returns. Compared by identity: each fetcher response is a new object.
+  const [dismissedData, setDismissedData] = useState<typeof searchFetcher.data>();
+  const searchTimer = useRef<number | undefined>(undefined);
+  const isSearching = searchFetcher.state !== "idle";
 
   const {
     register,
@@ -115,43 +118,40 @@ export default function MoviesCreatePage() {
   });
 
   const movieName = watch("movieName");
+  const movieNameField = register("movieName");
 
-  // Debounced TMDB search. Skips when the typed name matches the last-picked
-  // suggestion so the dropdown doesn't re-open after a selection.
-  useEffect(() => {
-    if (!movieName || movieName.length <= 2) {
-      setSearchResults([]);
+  const searchResults =
+    movieName && movieName.length > 2 && searchFetcher.data !== dismissedData
+      ? (searchFetcher.data?.searchResults ?? [])
+      : [];
+
+  useEffect(() => () => window.clearTimeout(searchTimer.current), []);
+
+  // Debounced TMDB search, driven by typing. Picking a suggestion cancels any
+  // pending search and sets the name via setValue, which doesn't fire onChange.
+  const scheduleSearch = (name: string) => {
+    window.clearTimeout(searchTimer.current);
+    if (name.length <= 2) {
+      setDismissedData(searchFetcher.data);
       return;
     }
-    if (selectedMovie && selectedMovie.title === movieName) {
-      return;
-    }
-    const handler = window.setTimeout(() => {
-      setIsSearching(true);
+    searchTimer.current = window.setTimeout(() => {
       searchFetcher.submit(
-        { q: movieName },
+        { q: name },
         { method: "get", action: href("/movies/new") },
       );
     }, 500);
-    return () => window.clearTimeout(handler);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [movieName, selectedMovie]);
-
-  useEffect(() => {
-    if (searchFetcher.data?.searchResults) {
-      setSearchResults(searchFetcher.data.searchResults);
-      setIsSearching(false);
-    }
-  }, [searchFetcher.data]);
+  };
 
   const handleMovieSelect = (movie: SearchResult) => {
+    window.clearTimeout(searchTimer.current);
     const year = movie.release_date?.split("-")[0] ?? "";
     setValue("movieName", movie.title);
     setValue("releaseDate", year);
     setValue("imageUrl", movie.poster_path ?? "");
     setValue("tmdbId", String(movie.id));
     setSelectedMovie(movie);
-    setSearchResults([]);
+    setDismissedData(searchFetcher.data);
   };
 
   const showSuggestions =
@@ -173,7 +173,11 @@ export default function MoviesCreatePage() {
 
             <div className="relative">
               <Field
-                {...register("movieName")}
+                {...movieNameField}
+                onChange={(e) => {
+                  movieNameField.onChange(e);
+                  scheduleSearch(e.target.value);
+                }}
                 label="Movie name"
                 placeholder="type a movie title..."
                 autoComplete="off"
