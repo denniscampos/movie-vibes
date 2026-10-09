@@ -189,3 +189,7 @@ export const removeMovies = async (movieIds: string[]) => {
     }),
   );
 };
+
+export const findMovieByTmdbId = async (tmdbId: number) => {
+  return db.movie.findFirst({ where: { tmdbId } });
+};
