@@ -1,6 +1,11 @@
 import type { Route } from "./+types/api.discord.interactions";
 import { searchMovie, searchMovieById } from "services/tmdb";
-import { createMovie, findMovieByTmdbId } from "~/models/movie.server";
+import {
+  createMovie,
+  findCategoryNames,
+  findMovieByTmdbId,
+  pickRandomMovie,
+} from "~/models/movie.server";
 import {
   INTERACTION_APPLICATION_COMMAND,
   INTERACTION_AUTOCOMPLETE,
@@ -11,15 +16,19 @@ import {
   MSG_NOT_AVAILABLE,
   MSG_NOT_SUPPORTED,
   MSG_NO_TITLE,
+  MSG_RANDOM_ERROR,
   autocompleteResponse,
+  buildCategoryChoices,
   buildChoices,
+  buildNoRandomPickMessage,
   buildNotFoundMessage,
+  buildRandomPickMessage,
   buildSaveInput,
   buildSuccessMessage,
   FLAG_EPHEMERAL,
   deferredPublic,
   ephemeralMessage,
-  getFocusedValue,
+  getFocusedOption,
   getStringOption,
   isInvocationAllowed,
   parseIdList,
@@ -52,6 +61,19 @@ async function suggestMovies(query: string): Promise<Response> {
   }
 }
 
+async function suggestCategories(
+  query: string,
+  unwatchedOnly: boolean,
+): Promise<Response> {
+  try {
+    const names = await findCategoryNames(query, { unwatchedOnly });
+    return autocompleteResponse(buildCategoryChoices(names));
+  } catch {
+    console.error("Discord category autocomplete failed");
+    return autocompleteResponse([]);
+  }
+}
+
 // A picked suggestion ("tmdb:<id>") is fetched exactly; free text falls back
 // to a search and the best-ranked result.
 async function resolveMovie(
@@ -80,7 +102,7 @@ async function addMovie(
     const input = buildSaveInput(movie, interaction);
     await createMovie(input);
     return {
-      content: buildSuccessMessage(movie, input.selectedBy),
+      content: buildSuccessMessage(movie, input.selectedBy, input.categoryName),
       success: true,
     };
   } catch (error) {
@@ -90,6 +112,27 @@ async function addMovie(
       error instanceof Error ? error.message : "unknown error",
     );
     return { content: MSG_ERROR, success: false };
+  }
+}
+
+async function randomMovie(categoryName: string): Promise<Outcome> {
+  try {
+    const pick = await pickRandomMovie({
+      categoryName: categoryName || undefined,
+    });
+    if (!pick) {
+      return {
+        content: buildNoRandomPickMessage(categoryName || undefined),
+        success: false,
+      };
+    }
+    return { content: buildRandomPickMessage(pick), success: true };
+  } catch (error) {
+    console.error(
+      "Discord random-movie failed:",
+      error instanceof Error ? error.message : "unknown error",
+    );
+    return { content: MSG_RANDOM_ERROR, success: false };
   }
 }
 
@@ -157,39 +200,45 @@ export async function action({ request }: Route.ActionArgs) {
 
   if (interaction.type === INTERACTION_PING) return pongResponse();
 
-  if (
-    interaction.type === INTERACTION_AUTOCOMPLETE &&
-    interaction.data?.name === "add-movie"
-  ) {
-    const allowed = isInvocationAllowed(
+  const commandName = interaction.data?.name;
+  const isKnownCommand =
+    commandName === "add-movie" || commandName === "random-movie";
+  const allowed = () =>
+    isInvocationAllowed(
       interaction,
       parseIdList(process.env.DISCORD_ALLOWED_GUILD_IDS),
       parseIdList(process.env.DISCORD_ALLOWED_USER_IDS),
     );
+
+  if (interaction.type === INTERACTION_AUTOCOMPLETE && isKnownCommand) {
     // Outside the allowlist: no suggestions (the command itself is refused).
-    if (!allowed) return autocompleteResponse([]);
-    return suggestMovies(getFocusedValue(interaction));
+    if (!allowed()) return autocompleteResponse([]);
+    const focused = getFocusedOption(interaction);
+    if (focused.name === "category") {
+      // /random-movie only suggests categories that still have something to pick.
+      return suggestCategories(focused.value, commandName === "random-movie");
+    }
+    if (commandName === "add-movie" && focused.name === "title") {
+      return suggestMovies(focused.value);
+    }
+    return autocompleteResponse([]);
   }
 
-  if (
-    interaction.type !== INTERACTION_APPLICATION_COMMAND ||
-    interaction.data?.name !== "add-movie"
-  ) {
+  if (interaction.type !== INTERACTION_APPLICATION_COMMAND || !isKnownCommand) {
     return ephemeralMessage(MSG_NOT_SUPPORTED);
   }
 
-  if (
-    !isInvocationAllowed(
-      interaction,
-      parseIdList(process.env.DISCORD_ALLOWED_GUILD_IDS),
-      parseIdList(process.env.DISCORD_ALLOWED_USER_IDS),
-    )
-  ) {
-    return ephemeralMessage(MSG_NOT_AVAILABLE);
-  }
+  if (!allowed()) return ephemeralMessage(MSG_NOT_AVAILABLE);
 
-  const title = (getStringOption(interaction, "title") ?? "").trim();
-  if (!title) return ephemeralMessage(MSG_NO_TITLE);
+  let work: () => Promise<Outcome>;
+  if (commandName === "random-movie") {
+    const category = (getStringOption(interaction, "category") ?? "").trim();
+    work = () => randomMovie(category);
+  } else {
+    const title = (getStringOption(interaction, "title") ?? "").trim();
+    if (!title) return ephemeralMessage(MSG_NO_TITLE);
+    work = () => addMovie(interaction, title);
+  }
 
   // Deferred strategy: TMDB + DB work can exceed Discord's 3-second window for
   // an initial response, so we acknowledge immediately with a deferred reply.
@@ -202,7 +251,7 @@ export async function action({ request }: Route.ActionArgs) {
   // The webhook calls are authenticated by the interaction token alone.
   const token = interaction.token;
   if (token) {
-    void addMovie(interaction, title)
+    void work()
       .then((outcome) => sendFollowUp(token, outcome))
       .catch(() => console.error("Discord follow-up failed"));
   }

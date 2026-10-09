@@ -39,6 +39,8 @@ export const MSG_NOT_AVAILABLE = "This command isn't available here.";
 export const MSG_NO_TITLE = "Please provide a movie title.";
 export const MSG_EXISTS = "This movie already exists.";
 export const MSG_ERROR = "Something went wrong adding that movie. Please try again.";
+export const MSG_RANDOM_ERROR =
+  "Something went wrong picking a movie. Please try again.";
 
 export async function verifyDiscordRequest(
   request: Request,
@@ -125,7 +127,7 @@ export function buildSaveInput(
     movieName: result.title,
     releaseDate: (result.release_date ?? "").slice(0, 4),
     selectedBy: pickedBy || getInvokerName(interaction),
-    categoryName: "",
+    categoryName: getStringOption(interaction, "category")?.trim() ?? "",
     status: MovieStatus.UPCOMING,
     imageUrl: result.poster_path ?? undefined,
     tmdbId: result.id,
@@ -135,8 +137,10 @@ export function buildSaveInput(
 export function buildSuccessMessage(
   result: TmdbSearchResult,
   selectedBy: string,
+  categoryName = "",
 ): string {
-  return `Added **${formatLabel(result)}** to Movie Vibes — picked by ${selectedBy}.`;
+  const where = categoryName ? ` under **${categoryName}**` : "";
+  return `Added **${formatLabel(result)}** to Movie Vibes${where} — picked by ${selectedBy}.`;
 }
 
 export const buildNotFoundMessage = (title: string) =>
@@ -156,10 +160,23 @@ export type AutocompleteChoice = { name: string; value: string };
 export const autocompleteResponse = (choices: AutocompleteChoice[]) =>
   Response.json({ type: RESPONSE_AUTOCOMPLETE_RESULT, data: { choices } });
 
-export function getFocusedValue(interaction: DiscordInteraction): string {
-  const value = interaction.data?.options?.find((o) => o.focused)?.value;
-  return typeof value === "string" ? value.trim() : "";
+export function getFocusedOption(interaction: DiscordInteraction): {
+  name: string;
+  value: string;
+} {
+  const option = interaction.data?.options?.find((o) => o.focused);
+  return {
+    name: option?.name ?? "",
+    value: typeof option?.value === "string" ? option.value.trim() : "",
+  };
 }
+
+// Category names are their own value, so free text and picks behave the same.
+export const buildCategoryChoices = (names: string[]): AutocompleteChoice[] =>
+  names
+    .filter((name) => name.length <= MAX_CHOICE_LENGTH)
+    .slice(0, MAX_CHOICES)
+    .map((name) => ({ name, value: name }));
 
 // A picked suggestion submits "tmdb:<id>" instead of free text.
 const CHOICE_PREFIX = "tmdb:";
@@ -215,3 +232,26 @@ export function rankResults(
     .sort((a, b) => (b.vote_count ?? 0) - (a.vote_count ?? 0));
   return [...exact, ...results.filter((r) => !exact.includes(r))];
 }
+
+// --- Random pick ---------------------------------------------------------
+
+export type RandomPick = {
+  movieName: string;
+  releaseDate: string;
+  selectedBy: string;
+  category: { name: string };
+};
+
+export function buildRandomPickMessage(pick: RandomPick): string {
+  const label = pick.releaseDate
+    ? `${pick.movieName} (${pick.releaseDate})`
+    : pick.movieName;
+  const category = pick.category.name.trim();
+  const from = category ? ` from **${category}**` : "";
+  return `🎲 The vibes have spoken: **${label}**${from} — picked by ${pick.selectedBy}.`;
+}
+
+export const buildNoRandomPickMessage = (categoryName?: string) =>
+  categoryName
+    ? `No unwatched movies in "${categoryName}". Try another category, or leave it blank to pick from everything.`
+    : "No unwatched movies left. Add one with /add-movie.";

@@ -115,13 +115,23 @@ Body (JSON array containing):
       "description": "Who is picking this movie (defaults to your Discord name)",
       "type": 3,
       "required": false
+    },
+    {
+      "name": "category",
+      "description": "Category for this movie (suggests ones already in use)",
+      "type": 3,
+      "required": false,
+      "max_length": 100,
+      "autocomplete": true
     }
   ]
 }
 ```
 
 - `type: 3` = `STRING`.
-- Keep it to `title` (required) plus optional `picked-by`. Category/status are intentionally omitted in v1 (see §7).
+- `title` (required) plus optional `picked-by` and `category`. Status is not an option (Discord adds are always `UPCOMING`, §7).
+- `category` autocompletes from existing, non-empty category names (case-insensitively de-duplicated). Free text is accepted, so a new category can be created from Discord.
+- A second command, `/random-movie [category]`, is registered alongside it (§8b).
 
 ---
 
@@ -137,9 +147,9 @@ The interaction handler must produce exactly what the existing persistence funct
 | `tmdbId`      | TMDB result `id`                                                       |
 | `selectedBy`  | `picked-by` option if provided, else invoker's Discord display name    |
 | `status`      | Always `UPCOMING` for Discord adds                                     |
-| `category`    | `""` (empty) — same empty category row `saveToDB` creates              |
+| `category`    | `category` option, trimmed; `""` (empty) when omitted                  |
 
-**Persistence call:** `createMovie({ movieName, releaseDate, selectedBy, categoryName: "", status: MovieStatus.UPCOMING, imageUrl, tmdbId })`
+**Persistence call:** `createMovie({ movieName, releaseDate, selectedBy, categoryName, status: MovieStatus.UPCOMING, imageUrl, tmdbId })`
 in `app/models/movie.server.ts`. `createMovie` stores `releaseDate` as given, so the handler passes the
 year only (first four characters of `release_date`, or `""` when missing). Discord adds are saved as
 `UPCOMING`; the website's add flow (`saveToDB`) still saves `NOT_WATCHED`.
@@ -188,6 +198,14 @@ The `title` option has `autocomplete: true`. While the user types, Discord sends
 
 - Fewer than 2 characters, an invoker outside the allowlist (§9), a TMDB error, or a search slower than 2.5 s → empty choices.
 - Picking a choice submits `tmdb:<id>`, so the exact movie is saved. Free text that ignores the suggestions falls back to search + ranking.
+
+### 8b. `/random-movie`
+
+`/random-movie [category]` picks a random movie that hasn't been watched yet (status `NOT_WATCHED` or `UPCOMING`), optionally limited to a category (case-insensitive exact match). It uses the same allowlist (§9), deferral and visibility rules as `/add-movie`.
+
+- Pick → public: `🎲 The vibes have spoken: **The Thing (1982)** from **Horror** — picked by Dennis.`
+- Nothing qualifies → ephemeral, suggests another category or leaving it blank.
+- `category` autocompletes only from categories that still have an unwatched movie.
 
 ### Response visibility
 
@@ -261,7 +279,7 @@ TMDB vars already exist: `TMDB_API_URL`, `TMDB_API_TOKEN`, `TMDB_API_IMAGE_URL`.
 ## 11. Future / out of scope for v1
 
 - **User Install → DMs & group DMs: implemented.** The command declares `integration_types: [0, 1]` and `contexts: [0, 1, 2]` (see §6) and is registered globally. DM / group-DM use requires the invoker to be in `DISCORD_ALLOWED_USER_IDS` (§9). The User Install toggle and install link in the Developer Portal remain manual.
-- Optional `category` / `status` command options.
+- Optional `status` command option. (`category`: implemented, §6.)
 - Disambiguation: covered by title autocomplete (§8a).
 
 ---
@@ -303,4 +321,4 @@ TMDB vars already exist: `TMDB_API_URL`, `TMDB_API_TOKEN`, `TMDB_API_IMAGE_URL`.
 
 ## 15. Open questions
 
-- None blocking. Future: add `category`/`status` options, disambiguation menu (see §11).
+- None blocking. Future: `status` option; a "re-roll" button on `/random-movie` picks.

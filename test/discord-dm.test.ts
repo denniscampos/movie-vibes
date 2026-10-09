@@ -17,7 +17,11 @@ vi.mock("../services/tmdb", () => ({ searchMovie: mocks.searchMovie }));
 
 import { action } from "../app/routes/api.discord.interactions";
 import { isInvocationAllowed } from "../app/utils/discord.server";
-import { addMovieCommand } from "../app/utils/discord-commands";
+import {
+  addMovieCommand,
+  commands,
+  randomMovieCommand,
+} from "../app/utils/discord-commands";
 import { MovieStatus } from "~/lib/generated/prisma/enums";
 
 const { publicKey, privateKey } = generateKeyPairSync("ed25519");
@@ -140,7 +144,30 @@ describe("command definition", () => {
         type: 3,
         required: false,
       },
+      {
+        name: "category",
+        description: "Category for this movie (suggests ones already in use)",
+        type: 3,
+        required: false,
+        max_length: 100,
+        autocomplete: true,
+      },
     ]);
+  });
+
+  it("defines /random-movie with an optional autocompleted category", () => {
+    expect(randomMovieCommand.name).toBe("random-movie");
+    expect(randomMovieCommand.integration_types).toEqual([0, 1]);
+    expect(randomMovieCommand.contexts).toEqual([0, 1, 2]);
+    expect(randomMovieCommand.options).toEqual([
+      expect.objectContaining({
+        name: "category",
+        type: 3,
+        required: false,
+        autocomplete: true,
+      }),
+    ]);
+    expect(commands).toEqual([addMovieCommand, randomMovieCommand]);
   });
 });
 
@@ -286,7 +313,7 @@ describe("register script", () => {
     expect(u).toBe(`${url}/commands`);
     expect(init.method).toBe("PUT");
     expect(init.headers.Authorization).toBe("Bot tok");
-    expect(JSON.parse(init.body)).toEqual([addMovieCommand]);
+    expect(JSON.parse(init.body)).toEqual(commands);
     expect(r.log.mock.calls.flat().join("\n")).toMatch(/globally/);
   });
 
