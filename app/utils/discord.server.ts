@@ -6,7 +6,7 @@ export const INTERACTION_APPLICATION_COMMAND = 2;
 const RESPONSE_PONG = 1;
 const RESPONSE_CHANNEL_MESSAGE = 4;
 const RESPONSE_DEFERRED_CHANNEL_MESSAGE = 5;
-const FLAG_EPHEMERAL = 64;
+export const FLAG_EPHEMERAL = 64;
 
 export type DiscordUser = {
   id?: string;
@@ -63,11 +63,8 @@ export const ephemeralMessage = (content: string) =>
     data: { content, flags: FLAG_EPHEMERAL },
   });
 
-export const deferredEphemeral = () =>
-  Response.json({
-    type: RESPONSE_DEFERRED_CHANNEL_MESSAGE,
-    data: { flags: FLAG_EPHEMERAL },
-  });
+export const deferredPublic = () =>
+  Response.json({ type: RESPONSE_DEFERRED_CHANNEL_MESSAGE });
 
 export function parseIdList(value: string | undefined | null): string[] {
   return (value ?? "")

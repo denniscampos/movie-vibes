@@ -12,7 +12,8 @@ import {
   buildNotFoundMessage,
   buildSaveInput,
   buildSuccessMessage,
-  deferredEphemeral,
+  FLAG_EPHEMERAL,
+  deferredPublic,
   ephemeralMessage,
   getStringOption,
   isInvocationAllowed,
@@ -22,44 +23,77 @@ import {
   type DiscordInteraction,
 } from "~/utils/discord.server";
 
-async function addMovie(interaction: DiscordInteraction, title: string) {
+type Outcome = { content: string; success: boolean };
+
+async function addMovie(
+  interaction: DiscordInteraction,
+  title: string,
+): Promise<Outcome> {
   try {
     const results = await searchMovie(title);
-    if (!results || results.length === 0) return buildNotFoundMessage(title);
+    if (!results || results.length === 0) {
+      return { content: buildNotFoundMessage(title), success: false };
+    }
 
     const first = results[0];
-    if (await findMovieByTmdbId(first.id)) return MSG_EXISTS;
+    if (await findMovieByTmdbId(first.id)) {
+      return { content: MSG_EXISTS, success: false };
+    }
 
     const input = buildSaveInput(first, interaction);
     await createMovie(input);
-    return buildSuccessMessage(first, input.selectedBy);
+    return {
+      content: buildSuccessMessage(first, input.selectedBy),
+      success: true,
+    };
   } catch (error) {
     // Log only the error message: never the interaction token or payload.
     console.error(
       "Discord add-movie failed:",
       error instanceof Error ? error.message : "unknown error",
     );
-    return MSG_ERROR;
+    return { content: MSG_ERROR, success: false };
   }
 }
 
-async function sendFollowUp(token: string, content: string) {
+// Never throws and never logs the URL or token (error text may embed the URL).
+async function discordRequest(
+  step: string,
+  url: string,
+  method: "PATCH" | "DELETE" | "POST",
+  body?: Record<string, unknown>,
+) {
   try {
-    const res = await fetch(
-      `https://discord.com/api/v10/webhooks/${process.env.DISCORD_APPLICATION_ID}/${token}/messages/@original`,
-      {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content }),
-      },
-    );
+    const res = await fetch(url, {
+      method,
+      ...(body
+        ? {
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          }
+        : {}),
+    });
     if (!res.ok) {
-      console.error("Discord follow-up failed with status", res.status);
+      console.error(`Discord ${step} failed with status`, res.status);
     }
   } catch {
-    // Error text may embed the request URL (which contains the token).
-    console.error("Discord follow-up request failed");
+    console.error(`Discord ${step} request failed`);
   }
+}
+
+async function sendFollowUp(token: string, { content, success }: Outcome) {
+  const base = `https://discord.com/api/v10/webhooks/${process.env.DISCORD_APPLICATION_ID}/${token}`;
+  if (success) {
+    await discordRequest("edit", `${base}/messages/@original`, "PATCH", {
+      content,
+    });
+    return;
+  }
+  await discordRequest("delete", `${base}/messages/@original`, "DELETE");
+  await discordRequest("follow-up", base, "POST", {
+    content,
+    flags: FLAG_EPHEMERAL,
+  });
 }
 
 export async function action({ request }: Route.ActionArgs) {
@@ -107,15 +141,20 @@ export async function action({ request }: Route.ActionArgs) {
   if (!title) return ephemeralMessage(MSG_NO_TITLE);
 
   // Deferred strategy: TMDB + DB work can exceed Discord's 3-second window for
-  // an initial response, so we acknowledge immediately with a deferred
-  // ephemeral reply and edit the original message once the work finishes.
-  // The webhook PATCH is authenticated by the interaction token alone.
+  // an initial response, so we acknowledge immediately with a deferred reply.
+  // A deferred response's visibility cannot be changed by editing it, so the
+  // deferral is PUBLIC (no flags) and:
+  //  - success: PATCH @original with the confirmation (stays public);
+  //  - anything else: DELETE @original (drops the public "thinking..."
+  //    placeholder), then POST an ephemeral (flags 64) follow-up, sent even if
+  //    the DELETE fails.
+  // The webhook calls are authenticated by the interaction token alone.
   const token = interaction.token;
   if (token) {
-    void addMovie(interaction, title).then((content) =>
-      sendFollowUp(token, content),
-    );
+    void addMovie(interaction, title)
+      .then((outcome) => sendFollowUp(token, outcome))
+      .catch(() => console.error("Discord follow-up failed"));
   }
 
-  return deferredEphemeral();
+  return deferredPublic();
 }

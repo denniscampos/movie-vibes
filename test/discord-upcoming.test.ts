@@ -82,8 +82,16 @@ const movie = {
 let fetchMock: ReturnType<typeof vi.fn>;
 
 async function finalContent() {
-  await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled());
-  const [, init] = fetchMock.mock.calls[0];
+  // Success is a PATCH; other outcomes are DELETE then a POST. Both carry the
+  // message in the only request that has a body.
+  await vi.waitFor(() =>
+    expect(
+      fetchMock.mock.calls.some(([, i]) => (i as RequestInit)?.body),
+    ).toBe(true),
+  );
+  const [, init] = fetchMock.mock.calls.find(
+    ([, i]) => (i as RequestInit)?.body,
+  )!;
   return {
     init: init as RequestInit,
     content: JSON.parse((init as RequestInit).body as string).content as string,
@@ -115,7 +123,7 @@ describe("Discord /add-movie saves UPCOMING via createMovie", () => {
       { id: 2, title: "Second", release_date: "2000-01-01", poster_path: null },
     ]);
     const res = await run(cmd());
-    expect(await res.json()).toEqual({ type: 5, data: { flags: 64 } });
+    expect(await res.json()).toEqual({ type: 5 });
     const { content } = await finalContent();
     expect(mocks.findMovieByTmdbId).toHaveBeenCalledWith(27205);
     expect(mocks.createMovie).toHaveBeenCalledTimes(1);

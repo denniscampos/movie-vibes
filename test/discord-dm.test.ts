@@ -92,7 +92,7 @@ async function expectRefused(i: unknown) {
 
 async function expectAllowed(i: unknown) {
   const res = await run(i);
-  expect(await res.json()).toEqual({ type: 5, data: { flags: 64 } });
+  expect(await res.json()).toEqual({ type: 5 });
   await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled());
 }
 

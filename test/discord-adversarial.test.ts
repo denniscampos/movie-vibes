@@ -94,8 +94,16 @@ async function run(interaction: unknown) {
 }
 
 async function finalContent() {
-  await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled());
-  const [url, init] = fetchMock.mock.calls[0];
+  // Success is a PATCH; other outcomes are DELETE then a POST. Both carry the
+  // message in the only request that has a body.
+  await vi.waitFor(() =>
+    expect(
+      fetchMock.mock.calls.some(([, i]) => (i as RequestInit)?.body),
+    ).toBe(true),
+  );
+  const [url, init] = fetchMock.mock.calls.find(
+    ([, i]) => (i as RequestInit)?.body,
+  )!;
   return {
     url: String(url),
     init: init as RequestInit,
@@ -205,7 +213,7 @@ describe("authorization", () => {
   it("guild allowlist parsing: trims, ignores empties, empty denies all, missing guild refused", async () => {
     process.env.DISCORD_ALLOWED_GUILD_IDS = " , g0 ,, g1 ,";
     const res = await run(cmd());
-    expect(await res.json()).toEqual({ type: 5, data: { flags: 64 } });
+    expect(await res.json()).toEqual({ type: 5 });
     await finalContent();
 
     fetchMock.mockClear();
@@ -257,10 +265,10 @@ describe("authorization", () => {
 });
 
 describe("processing", () => {
-  it("deferred response is exactly {type:5,data:{flags:64}} and PATCH goes to the right URL", async () => {
+  it("deferred response is exactly {type:5} (public) and success PATCH goes to the right URL", async () => {
     const res = await run(cmd());
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ type: 5, data: { flags: 64 } });
+    expect(await res.json()).toEqual({ type: 5 });
     const { url, init } = await finalContent();
     expect(url).toBe(
       `https://discord.com/api/v10/webhooks/${APP_ID}/${TOKEN}/messages/@original`,
