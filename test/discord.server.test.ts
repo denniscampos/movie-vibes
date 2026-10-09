@@ -220,7 +220,7 @@ describe("interactions route", () => {
     mocks.createMovie.mockResolvedValue({});
 
     const res = await callAction(signedRequest(command()));
-    expect(await res.json()).toEqual({ type: 5, data: { flags: 64 } });
+    expect(await res.json()).toEqual({ type: 5 });
 
     await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled());
     expect(mocks.searchMovie).toHaveBeenCalledWith("Dune");
@@ -250,9 +250,9 @@ describe("interactions route", () => {
     mocks.findMovieByTmdbId.mockResolvedValue({ id: "m1" });
 
     await callAction(signedRequest(command()));
-    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
     expect(mocks.createMovie).not.toHaveBeenCalled();
-    expect(JSON.parse(fetchMock.mock.calls[0][1].body).content).toBe(
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body).content).toBe(
       "This movie already exists.",
     );
   });
@@ -260,9 +260,9 @@ describe("interactions route", () => {
   it("reports no results without writing", async () => {
     mocks.searchMovie.mockResolvedValue([]);
     await callAction(signedRequest(command()));
-    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
     expect(mocks.findMovieByTmdbId).not.toHaveBeenCalled();
-    expect(JSON.parse(fetchMock.mock.calls[0][1].body).content).toBe(
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body).content).toBe(
       'Couldn\'t find a movie matching "Dune".',
     );
   });
@@ -270,8 +270,8 @@ describe("interactions route", () => {
   it("sends a generic message on errors and survives a failing PATCH", async () => {
     mocks.searchMovie.mockRejectedValue(new Error("secret db detail"));
     await callAction(signedRequest(command()));
-    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled());
-    expect(JSON.parse(fetchMock.mock.calls[0][1].body).content).toBe(
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body).content).toBe(
       "Something went wrong adding that movie. Please try again.",
     );
 

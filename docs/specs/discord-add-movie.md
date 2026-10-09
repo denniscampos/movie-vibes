@@ -182,18 +182,23 @@ Command handling order:
 
 ### Response visibility
 
-All replies are **ephemeral** (`flags: 64`, only visible to the invoker). This is the most secure option: it avoids leaking data into the channel and keeps the chat clean / non-spammy. Flip to public later only if the group wants channel visibility of added movies.
+Only the **success** confirmation (movie added) is public, visible to everyone in the channel or group DM. Every other outcome (already exists, not found, error) is **ephemeral** (`flags: 64`, only visible to the invoker), as are the immediate refusals (unsupported command, allowlist refusal, empty title).
+
+Discord does not allow a deferred response's visibility to be changed by editing it, so the initial deferral (`{ "type": 5 }`, no flags) is public, and:
+
+- Success: `PATCH .../messages/@original` with the success message.
+- Any other outcome: `DELETE .../messages/@original` (removes the public "thinking…" placeholder), then `POST` to the webhook base with `{ content, flags: 64 }`. The POST is sent even if the DELETE fails.
 
 ### Response timing (3-second rule)
 
 Discord requires a response within **3 seconds**. If TMDB + DB reliably finish under that (likely),
 respond synchronously with type `4`. If not, or if you're unsure:
 
-1. Immediately respond with `{ "type": 5 }` (deferred).
+1. Immediately respond with `{ "type": 5 }` (deferred, public: no `flags`).
 2. Do the work.
-3. Follow up with
-   `PATCH https://discord.com/api/v10/webhooks/{DISCORD_APPLICATION_ID}/{interaction.token}/messages/@original`
-   with the final message body.
+3. Follow up using `https://discord.com/api/v10/webhooks/{DISCORD_APPLICATION_ID}/{interaction.token}`:
+   - success: `PATCH {base}/messages/@original` with `{ "content": ... }`;
+   - otherwise: `DELETE {base}/messages/@original`, then `POST {base}` with `{ "content": ..., "flags": 64 }`.
 
 Pick one strategy and document it in code. For v1, prefer the **deferred (type 5) + follow-up** path
 to be safe.
