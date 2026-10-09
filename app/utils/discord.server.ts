@@ -85,12 +85,16 @@ export function isInvocationAllowed(
   allowedGuildIds: string[],
   allowedUserIds: string[],
 ): boolean {
-  if (allowedGuildIds.length === 0) return false;
-  if (!interaction.guild_id || !allowedGuildIds.includes(interaction.guild_id)) {
-    return false;
+  const userId = getInvokerId(interaction);
+  if (!interaction.guild_id) {
+    // Bot DM or group DM: only explicitly allowlisted users.
+    return (
+      allowedUserIds.length > 0 && !!userId && allowedUserIds.includes(userId)
+    );
   }
+  if (allowedGuildIds.length === 0) return false;
+  if (!allowedGuildIds.includes(interaction.guild_id)) return false;
   if (allowedUserIds.length > 0) {
-    const userId = getInvokerId(interaction);
     if (!userId || !allowedUserIds.includes(userId)) return false;
   }
   return true;

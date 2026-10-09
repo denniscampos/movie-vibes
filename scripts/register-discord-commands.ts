@@ -1,15 +1,18 @@
 /**
- * Registers the /add-movie guild command with Discord (idempotent PUT).
+ * Registers the /add-movie command globally with Discord (idempotent PUT),
+ * installable to servers and user accounts, usable in servers, DMs and group
+ * DMs. Global commands can take up to an hour to appear.
+ *
+ * If DISCORD_GUILD_ID is set, the earlier guild-scoped copy of the command is
+ * then removed (PUT an empty list) so the server does not show it twice.
  *
  * Usage:
  *   pnpm discord:register
  */
 
-const required = [
-  "DISCORD_APPLICATION_ID",
-  "DISCORD_GUILD_ID",
-  "DISCORD_BOT_TOKEN",
-] as const;
+import { addMovieCommand } from "../app/utils/discord-commands";
+
+const required = ["DISCORD_APPLICATION_ID", "DISCORD_BOT_TOKEN"] as const;
 
 const missing = required.filter((name) => !process.env[name]);
 if (missing.length > 0) {
@@ -17,45 +20,44 @@ if (missing.length > 0) {
   process.exit(1);
 }
 
-const commands = [
-  {
-    name: "add-movie",
-    description: "Add a movie to Movie Vibes",
-    options: [
-      {
-        name: "title",
-        description: "Movie title to add",
-        type: 3,
-        required: true,
-      },
-      {
-        name: "picked-by",
-        description: "Who is picking this movie (defaults to your Discord name)",
-        type: 3,
-        required: false,
-      },
-    ],
-  },
-];
+const appId = process.env.DISCORD_APPLICATION_ID;
+const guildId = process.env.DISCORD_GUILD_ID;
+const base = `https://discord.com/api/v10/applications/${appId}`;
 
-const res = await fetch(
-  `https://discord.com/api/v10/applications/${process.env.DISCORD_APPLICATION_ID}/guilds/${process.env.DISCORD_GUILD_ID}/commands`,
-  {
+async function put(label: string, url: string, body: unknown) {
+  const res = await fetch(url, {
     method: "PUT",
     headers: {
       Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(commands),
-  },
-);
-
-if (!res.ok) {
-  console.error(`Discord returned HTTP ${res.status}`);
-  console.error(await res.text());
-  process.exit(1);
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    console.error(`${label} failed: HTTP ${res.status}`);
+    console.error(await res.text());
+    process.exit(1);
+  }
 }
 
-console.log(`Registered ${commands.length} command(s) (HTTP ${res.status}).`);
+await put("Global command registration", `${base}/commands`, [
+  addMovieCommand,
+]);
+
+if (guildId) {
+  await put(
+    "Guild command cleanup",
+    `${base}/guilds/${guildId}/commands`,
+    [],
+  );
+}
+
+console.log("Registered /add-movie globally.");
+console.log("Global commands can take up to an hour to appear.");
+console.log(
+  guildId
+    ? `Cleared guild commands for guild ${guildId}.`
+    : "Guild commands were not cleared (DISCORD_GUILD_ID not set).",
+);
 
 export {};

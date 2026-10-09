@@ -30,7 +30,6 @@ confirmation message in Discord.
 
 - No editing, deleting, or listing movies from Discord.
 - No fuzzy disambiguation UI (auto-pick the best TMDB result; see §8).
-- No support for User-Install / DMs / group DMs in v1 (see §11).
 - No per-user Movie Vibes accounts — Discord identity is only used for `selectedBy` and authorization.
 
 ---
@@ -39,7 +38,7 @@ confirmation message in Discord.
 
 - **Direction:** This is **not** an incoming channel webhook. Discord **Applications** deliver command invocations ("interactions") to an HTTP endpoint we host. The endpoint lives in this repo as a React Router resource route.
 - **Deployment:** Existing React Router (SSR) app on Railway. The interaction endpoint is just another route → **no separate service, no extra compute**. Discord only calls it when a command is run.
-- **Isolation:** A private Guild Install on a test server. Guild commands register instantly (global commands can take up to ~1 hour to propagate), so we use guild commands for testing.
+- **Isolation:** The command is registered globally by `pnpm discord:register` (it can take up to ~1 hour to appear); when `DISCORD_GUILD_ID` is set, the script also clears the earlier guild-scoped copy. Access is limited by `DISCORD_ALLOWED_GUILD_IDS` in servers and `DISCORD_ALLOWED_USER_IDS` (required outside servers); see §9.
 
 ---
 
@@ -70,7 +69,7 @@ Response: confirmation message shown in Discord
    - `verifyDiscordRequest(request, rawBody, publicKey)` → boolean.
    - `interactionResponse(...)` helpers for PONG / message / deferred.
 3. **Command registration script** — `scripts/register-discord-commands.ts`
-   - Idempotent `PUT` of the guild command definition (see §6).
+   - Idempotent `PUT` of the global command definition; clears the old guild-scoped copy when `DISCORD_GUILD_ID` is set (see §6).
 4. **Route registration** — add the route to `app/routes.ts`.
 
 ---
@@ -78,22 +77,31 @@ Response: confirmation message shown in Discord
 ## 6. Discord command definition
 
 - **Application/bot display name:** `Movie-Bot` (set in the Discord Developer Portal; command responses appear under this name).
-- **Install:** Guild Install only for v1, on the private test server.
+- **Install:** Guild Install and User Install (`integration_types: [0, 1]`). Usable in servers, the bot's DM and private group DMs (`contexts: [0, 1, 2]`). The definition lives in `app/utils/discord-commands.ts`.
 
-Register with:
+Register globally (idempotent) with:
 
 ```
-PUT https://discord.com/api/v10/applications/{DISCORD_APPLICATION_ID}/guilds/{DISCORD_GUILD_ID}/commands
+PUT https://discord.com/api/v10/applications/{DISCORD_APPLICATION_ID}/commands
 Authorization: Bot {DISCORD_BOT_TOKEN}
 Content-Type: application/json
 ```
 
-Body:
+Global commands can take up to an hour to appear. If `DISCORD_GUILD_ID` is set, the script then clears the earlier guild-scoped copy so the server does not show it twice:
+
+```
+PUT https://discord.com/api/v10/applications/{DISCORD_APPLICATION_ID}/guilds/{DISCORD_GUILD_ID}/commands
+body: []
+```
+
+Body (JSON array containing):
 
 ```json
 {
   "name": "add-movie",
   "description": "Add a movie to Movie Vibes",
+  "integration_types": [0, 1],
+  "contexts": [0, 1, 2],
   "options": [
     {
       "name": "title",
@@ -197,7 +205,8 @@ to be safe.
 - **Signature verification is mandatory.** Verify `X-Signature-Ed25519` over `X-Signature-Timestamp + rawBody` using `DISCORD_PUBLIC_KEY`. Use the `discord-interactions` package (`verifyKey`) or `@noble/ed25519`; do not hand-roll crypto. Return `401` on failure.
   - **Must use the raw request body**, not a re-serialized object.
 - **This route bypasses `requireLogin`.** Access control is enforced at the Discord layer:
-  - Allowlist by guild ID (the test server) and/or by Discord user ID.
+  - **Server invocation** (`guild_id` present): the guild must be in `DISCORD_ALLOWED_GUILD_IDS`; additionally, when `DISCORD_ALLOWED_USER_IDS` is non-empty, the invoker must be in it.
+  - **DM / group-DM invocation** (no `guild_id`): allowed only when `DISCORD_ALLOWED_USER_IDS` is non-empty and contains the invoker. The guild allowlist is not consulted; an empty user allowlist refuses all DM use. A missing invoker ID is refused.
   - Reject any invocation from outside the allowlist with an ephemeral message.
   - Read allowlists from env (comma-separated).
 - **Secrets:** only the bot token is used at registration time; the public key is safe to keep in env too. Never log the token or full interaction payloads containing tokens.
@@ -208,9 +217,9 @@ to be safe.
 DISCORD_APPLICATION_ID=""
 DISCORD_PUBLIC_KEY=""
 DISCORD_BOT_TOKEN=""            # registration script only
-DISCORD_GUILD_ID=""            # test server for command registration
-DISCORD_ALLOWED_GUILD_IDS=""   # comma-separated; command only works here
-DISCORD_ALLOWED_USER_IDS=""    # comma-separated; optional extra lock-down
+DISCORD_GUILD_ID=""            # optional; registration script clears old guild-scoped commands here
+DISCORD_ALLOWED_GUILD_IDS=""   # comma-separated; servers where the command works
+DISCORD_ALLOWED_USER_IDS=""    # comma-separated; required for DM / group-DM use; also restricts server use when non-empty
 ```
 
 TMDB vars already exist: `TMDB_API_URL`, `TMDB_API_TOKEN`, `TMDB_API_IMAGE_URL`.
@@ -237,10 +246,9 @@ TMDB vars already exist: `TMDB_API_URL`, `TMDB_API_TOKEN`, `TMDB_API_IMAGE_URL`.
 
 ## 11. Future / out of scope for v1
 
-- **User Install → DMs & group DMs.** Enable by supporting both `guild` and `user` install contexts (`integration_types`) and `contexts` (`GUILD`, `BOT_DM`, `PRIVATE_CHANNEL`). This is what lets `/add-movie` work in a private group DM. Verify Discord's current support for group DMs before relying on it; not part of v1.
+- **User Install → DMs & group DMs: implemented.** The command declares `integration_types: [0, 1]` and `contexts: [0, 1, 2]` (see §6) and is registered globally. DM / group-DM use requires the invoker to be in `DISCORD_ALLOWED_USER_IDS` (§9). The User Install toggle and install link in the Developer Portal remain manual.
 - Optional `category` / `status` command options.
 - Disambiguation: if multiple plausible matches, present a select menu (Component/Menu) before saving.
-- Slash command in the real server (register as a global command).
 
 ---
 
@@ -281,4 +289,4 @@ TMDB vars already exist: `TMDB_API_URL`, `TMDB_API_TOKEN`, `TMDB_API_IMAGE_URL`.
 
 ## 15. Open questions
 
-- None blocking. Future: add `category`/`status` options, disambiguation menu, User Install for DMs/group DMs (see §11).
+- None blocking. Future: add `category`/`status` options, disambiguation menu (see §11).
