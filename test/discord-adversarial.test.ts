@@ -3,17 +3,18 @@ import { generateKeyPairSync, sign } from "node:crypto";
 
 const mocks = vi.hoisted(() => ({
   findMovieByTmdbId: vi.fn(),
-  saveToDB: vi.fn(),
+  createMovie: vi.fn(),
   searchMovie: vi.fn(),
 }));
 
 vi.mock("~/models/movie.server", () => ({
   findMovieByTmdbId: mocks.findMovieByTmdbId,
-  saveToDB: mocks.saveToDB,
+  createMovie: mocks.createMovie,
 }));
 vi.mock("../services/tmdb", () => ({ searchMovie: mocks.searchMovie }));
 
 import { action } from "../app/routes/api.discord.interactions";
+import { MovieStatus } from "~/lib/generated/prisma/enums";
 
 const { publicKey, privateKey } = generateKeyPairSync("ed25519");
 const PUBLIC_HEX = publicKey
@@ -84,7 +85,7 @@ let fetchMock: ReturnType<typeof vi.fn>;
 function noWork() {
   expect(mocks.searchMovie).not.toHaveBeenCalled();
   expect(mocks.findMovieByTmdbId).not.toHaveBeenCalled();
-  expect(mocks.saveToDB).not.toHaveBeenCalled();
+  expect(mocks.createMovie).not.toHaveBeenCalled();
 }
 
 async function run(interaction: unknown) {
@@ -108,7 +109,7 @@ beforeEach(() => {
   process.env.DISCORD_ALLOWED_GUILD_IDS = "g1";
   process.env.DISCORD_ALLOWED_USER_IDS = "";
   mocks.findMovieByTmdbId.mockReset().mockResolvedValue(null);
-  mocks.saveToDB.mockReset().mockResolvedValue(undefined);
+  mocks.createMovie.mockReset().mockResolvedValue(undefined);
   mocks.searchMovie.mockReset().mockResolvedValue([movie]);
   fetchMock = vi.fn().mockResolvedValue(new Response("{}", { status: 200 }));
   vi.stubGlobal("fetch", fetchMock);
@@ -291,7 +292,7 @@ describe("processing", () => {
     expect(mocks.searchMovie).toHaveBeenCalledWith("Nope");
     expect(content).toBe(`Couldn't find a movie matching "Nope".`);
     expect(mocks.findMovieByTmdbId).not.toHaveBeenCalled();
-    expect(mocks.saveToDB).not.toHaveBeenCalled();
+    expect(mocks.createMovie).not.toHaveBeenCalled();
   });
 
   it("uses first result, saves exact mapping, success message with year", async () => {
@@ -302,13 +303,15 @@ describe("processing", () => {
     await run(cmd());
     const { content } = await finalContent();
     expect(mocks.findMovieByTmdbId).toHaveBeenCalledWith(27205);
-    expect(mocks.saveToDB).toHaveBeenCalledTimes(1);
-    expect(mocks.saveToDB.mock.calls[0][0]).toEqual({
+    expect(mocks.createMovie).toHaveBeenCalledTimes(1);
+    expect(mocks.createMovie.mock.calls[0][0]).toEqual({
       movieName: "Inception",
-      releaseDate: "2010-07-16",
+      releaseDate: "2010",
+      selectedBy: "Global",
+      categoryName: "",
+      status: MovieStatus.UPCOMING,
       imageUrl: "https://img/x.jpg",
       tmdbId: 27205,
-      selectedBy: "Global",
     });
     expect(content).toBe(
       "Added **Inception (2010)** to Movie Vibes — picked by Global.",
@@ -318,25 +321,27 @@ describe("processing", () => {
   it("poster null -> imageUrl undefined; missing/empty release_date omits year", async () => {
     for (const rd of ["", undefined]) {
       fetchMock.mockClear();
-      mocks.saveToDB.mockClear();
+      mocks.createMovie.mockClear();
       mocks.searchMovie.mockResolvedValue([
         { id: 5, title: "Foo", release_date: rd, poster_path: null },
       ]);
       await run(cmd());
       const { content } = await finalContent();
-      const arg = mocks.saveToDB.mock.calls[0][0];
+      const arg = mocks.createMovie.mock.calls[0][0];
       expect(arg.imageUrl).toBeUndefined();
       expect(arg.tmdbId).toBe(5);
+      expect(arg.releaseDate).toBe("");
+      expect(arg.status).toBe(MovieStatus.UPCOMING);
       expect(content).toBe("Added **Foo** to Movie Vibes — picked by Global.");
     }
   });
 
-  it("duplicate tmdbId -> exact message, no saveToDB", async () => {
+  it("duplicate tmdbId -> exact message, no createMovie", async () => {
     mocks.findMovieByTmdbId.mockResolvedValue({ id: "x", tmdbId: 27205 });
     await run(cmd());
     const { content } = await finalContent();
     expect(content).toBe("This movie already exists.");
-    expect(mocks.saveToDB).not.toHaveBeenCalled();
+    expect(mocks.createMovie).not.toHaveBeenCalled();
   });
 
   it("selectedBy: picked-by trimmed; whitespace/empty falls back to display name chain", async () => {
@@ -356,12 +361,12 @@ describe("processing", () => {
       [{ member: undefined, user: undefined }, [title], "Discord"],
     ];
     for (const [over, opts, want] of cases) {
-      mocks.saveToDB.mockClear();
+      mocks.createMovie.mockClear();
       fetchMock.mockClear();
       const res = await run(cmd(over, opts));
       expect((await res.json()).type).toBe(5);
       const { content } = await finalContent();
-      expect(mocks.saveToDB.mock.calls[0][0].selectedBy, want).toBe(want);
+      expect(mocks.createMovie.mock.calls[0][0].selectedBy, want).toBe(want);
       expect(content).toContain(`picked by ${want}.`);
     }
   });
@@ -371,7 +376,7 @@ describe("processing", () => {
     const variants: Array<() => void> = [
       () => mocks.searchMovie.mockRejectedValue(new Error(secret)),
       () => mocks.findMovieByTmdbId.mockRejectedValue(new Error(secret)),
-      () => mocks.saveToDB.mockRejectedValue(new Error(secret)),
+      () => mocks.createMovie.mockRejectedValue(new Error(secret)),
     ];
     const logs = [
       vi.spyOn(console, "error").mockImplementation(() => {}),
@@ -381,7 +386,7 @@ describe("processing", () => {
     for (const setup of variants) {
       mocks.searchMovie.mockResolvedValue([movie]);
       mocks.findMovieByTmdbId.mockResolvedValue(null);
-      mocks.saveToDB.mockResolvedValue(undefined);
+      mocks.createMovie.mockResolvedValue(undefined);
       setup();
       fetchMock.mockClear();
       const res = await run(cmd());

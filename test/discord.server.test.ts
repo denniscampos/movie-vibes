@@ -4,16 +4,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   searchMovie: vi.fn(),
   findMovieByTmdbId: vi.fn(),
-  saveToDB: vi.fn(),
+  createMovie: vi.fn(),
 }));
 
 vi.mock("services/tmdb", () => ({ searchMovie: mocks.searchMovie }));
 vi.mock("~/models/movie.server", () => ({
   findMovieByTmdbId: mocks.findMovieByTmdbId,
-  saveToDB: mocks.saveToDB,
+  createMovie: mocks.createMovie,
 }));
 
 import { action } from "~/routes/api.discord.interactions";
+import { MovieStatus } from "~/lib/generated/prisma/enums";
 import {
   buildSaveInput,
   buildSuccessMessage,
@@ -84,7 +85,7 @@ beforeEach(() => {
   vi.spyOn(console, "error").mockImplementation(() => {});
   mocks.searchMovie.mockReset();
   mocks.findMovieByTmdbId.mockReset();
-  mocks.saveToDB.mockReset();
+  mocks.createMovie.mockReset();
 });
 
 afterEach(() => {
@@ -95,7 +96,7 @@ afterEach(() => {
 function expectNoBackendCalls() {
   expect(mocks.searchMovie).not.toHaveBeenCalled();
   expect(mocks.findMovieByTmdbId).not.toHaveBeenCalled();
-  expect(mocks.saveToDB).not.toHaveBeenCalled();
+  expect(mocks.createMovie).not.toHaveBeenCalled();
 }
 
 describe("verifyDiscordRequest", () => {
@@ -216,7 +217,7 @@ describe("interactions route", () => {
   it("defers, saves the first result, and PATCHes the final message", async () => {
     mocks.searchMovie.mockResolvedValue([tmdbResult, { ...tmdbResult, id: 43 }]);
     mocks.findMovieByTmdbId.mockResolvedValue(null);
-    mocks.saveToDB.mockResolvedValue({});
+    mocks.createMovie.mockResolvedValue({});
 
     const res = await callAction(signedRequest(command()));
     expect(await res.json()).toEqual({ type: 5, data: { flags: 64 } });
@@ -224,13 +225,16 @@ describe("interactions route", () => {
     await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled());
     expect(mocks.searchMovie).toHaveBeenCalledWith("Dune");
     expect(mocks.findMovieByTmdbId).toHaveBeenCalledWith(42);
-    expect(mocks.saveToDB).toHaveBeenCalledWith({
+    expect(mocks.createMovie).toHaveBeenCalledWith({
       movieName: "Dune",
-      releaseDate: "2021-09-15",
+      releaseDate: "2021",
+      selectedBy: "Display",
+      categoryName: "",
+      status: MovieStatus.UPCOMING,
       imageUrl: "https://img/x.jpg",
       tmdbId: 42,
-      selectedBy: "Display",
     });
+    expect(mocks.createMovie).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe(
       "https://discord.com/api/v10/webhooks/app1/secret-token/messages/@original",
@@ -247,7 +251,7 @@ describe("interactions route", () => {
 
     await callAction(signedRequest(command()));
     await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled());
-    expect(mocks.saveToDB).not.toHaveBeenCalled();
+    expect(mocks.createMovie).not.toHaveBeenCalled();
     expect(JSON.parse(fetchMock.mock.calls[0][1].body).content).toBe(
       "This movie already exists.",
     );
@@ -314,11 +318,14 @@ describe("helpers", () => {
     }) as never;
     expect(buildSaveInput({ ...tmdbResult, poster_path: null }, i)).toEqual({
       movieName: "Dune",
-      releaseDate: "2021-09-15",
+      releaseDate: "2021",
+      selectedBy: "Sam",
+      categoryName: "",
+      status: MovieStatus.UPCOMING,
       imageUrl: undefined,
       tmdbId: 42,
-      selectedBy: "Sam",
     });
+    expect(buildSaveInput({ ...tmdbResult, release_date: "" }, i).releaseDate).toBe("");
   });
 
   it("omits the year when release_date is empty", () => {

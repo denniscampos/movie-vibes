@@ -1,4 +1,5 @@
 import { verifyKey } from "discord-interactions";
+import { MovieStatus } from "~/lib/generated/prisma/enums";
 
 export const INTERACTION_PING = 1;
 export const INTERACTION_APPLICATION_COMMAND = 2;
@@ -120,10 +121,12 @@ export function buildSaveInput(
   const pickedBy = getStringOption(interaction, "picked-by")?.trim();
   return {
     movieName: result.title,
-    releaseDate: result.release_date ?? "",
+    releaseDate: (result.release_date ?? "").slice(0, 4),
+    selectedBy: pickedBy || getInvokerName(interaction),
+    categoryName: "",
+    status: MovieStatus.UPCOMING,
     imageUrl: result.poster_path ?? undefined,
     tmdbId: result.id,
-    selectedBy: pickedBy || getInvokerName(interaction),
   };
 }
 
