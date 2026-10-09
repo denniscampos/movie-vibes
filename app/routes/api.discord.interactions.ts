@@ -1,6 +1,6 @@
 import type { Route } from "./+types/api.discord.interactions";
 import { searchMovie } from "services/tmdb";
-import { findMovieByTmdbId, saveToDB } from "~/models/movie.server";
+import { createMovie, findMovieByTmdbId } from "~/models/movie.server";
 import {
   INTERACTION_APPLICATION_COMMAND,
   INTERACTION_PING,
@@ -31,7 +31,7 @@ async function addMovie(interaction: DiscordInteraction, title: string) {
     if (await findMovieByTmdbId(first.id)) return MSG_EXISTS;
 
     const input = buildSaveInput(first, interaction);
-    await saveToDB(input);
+    await createMovie(input);
     return buildSuccessMessage(first, input.selectedBy);
   } catch (error) {
     // Log only the error message: never the interaction token or payload.
