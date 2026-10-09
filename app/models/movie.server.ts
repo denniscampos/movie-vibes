@@ -193,3 +193,69 @@ export const removeMovies = async (movieIds: string[]) => {
 export const findMovieByTmdbId = async (tmdbId: number) => {
   return db.movie.findFirst({ where: { tmdbId } });
 };
+
+const MAX_CATEGORY_SUGGESTIONS = 25;
+
+/**
+ * Distinct, non-empty category names that are attached to a movie, matching
+ * `query` (case-insensitive). `unwatchedOnly` limits to categories that still
+ * have a movie left to watch.
+ */
+export const findCategoryNames = async (
+  query: string,
+  { unwatchedOnly = false }: { unwatchedOnly?: boolean } = {},
+) => {
+  const rows = await db.category.findMany({
+    where: {
+      name: { contains: query, mode: "insensitive", not: "" },
+      movies: {
+        some: unwatchedOnly ? { status: { not: MovieStatus.WATCHED } } : {},
+      },
+    },
+    distinct: ["name"],
+    orderBy: { name: "asc" },
+    select: { name: true },
+    take: 100,
+  });
+
+  // `distinct` is case-sensitive; collapse "Horror" / "horror" into one.
+  const seen = new Set<string>();
+  const names: string[] = [];
+  for (const { name } of rows) {
+    const trimmed = name.trim();
+    const key = trimmed.toLowerCase();
+    if (!trimmed || seen.has(key)) continue;
+    seen.add(key);
+    names.push(trimmed);
+  }
+  return names.slice(0, MAX_CATEGORY_SUGGESTIONS);
+};
+
+/**
+ * A random movie that hasn't been watched yet, optionally limited to a
+ * category (case-insensitive exact match). Undefined when nothing qualifies.
+ */
+export const pickRandomMovie = async ({
+  categoryName,
+}: { categoryName?: string } = {}) => {
+  const movies = await db.movie.findMany({
+    where: {
+      status: { not: MovieStatus.WATCHED },
+      ...(categoryName
+        ? {
+            category: {
+              name: { equals: categoryName, mode: "insensitive" },
+            },
+          }
+        : {}),
+    },
+    select: {
+      movieName: true,
+      releaseDate: true,
+      selectedBy: true,
+      category: { select: { name: true } },
+    },
+  });
+  if (movies.length === 0) return undefined;
+  return movies[Math.floor(Math.random() * movies.length)];
+};

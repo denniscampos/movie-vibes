@@ -1,16 +1,16 @@
 /**
- * Registers the /add-movie command globally with Discord (idempotent PUT),
- * installable to servers and user accounts, usable in servers, DMs and group
+ * Registers the /add-movie and /random-movie commands globally with Discord
+ * (idempotent PUT), installable to servers and user accounts, usable in servers, DMs and group
  * DMs. Global commands can take up to an hour to appear.
  *
- * If DISCORD_GUILD_ID is set, the earlier guild-scoped copy of the command is
- * then removed (PUT an empty list) so the server does not show it twice.
+ * If DISCORD_GUILD_ID is set, the earlier guild-scoped copy of the commands is
+ * then removed (PUT an empty list) so the server does not show them twice.
  *
  * Usage:
  *   pnpm discord:register
  */
 
-import { addMovieCommand } from "../app/utils/discord-commands";
+import { commands } from "../app/utils/discord-commands";
 
 const required = ["DISCORD_APPLICATION_ID", "DISCORD_BOT_TOKEN"] as const;
 
@@ -40,9 +40,7 @@ async function put(label: string, url: string, body: unknown) {
   }
 }
 
-await put("Global command registration", `${base}/commands`, [
-  addMovieCommand,
-]);
+await put("Global command registration", `${base}/commands`, commands);
 
 if (guildId) {
   await put(
@@ -52,7 +50,9 @@ if (guildId) {
   );
 }
 
-console.log("Registered /add-movie globally.");
+console.log(
+  `Registered ${commands.map((c) => `/${c.name}`).join(", ")} globally.`,
+);
 console.log("Global commands can take up to an hour to appear.");
 console.log(
   guildId
