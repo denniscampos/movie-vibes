@@ -15,6 +15,8 @@ export const addMovieCommand = {
       description: "Movie title to add",
       type: 3,
       required: true,
+      // Suggests TMDB matches while typing (handled in the interactions route).
+      autocomplete: true,
     },
     {
       name: "picked-by",

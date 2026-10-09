@@ -222,7 +222,7 @@ describe("non-success follow-up: DELETE then ephemeral POST", () => {
     [
       "not found",
       () => mocks.searchMovie.mockResolvedValue([]),
-      'Couldn\'t find a movie matching "Inception".',
+      'Couldn\'t find a movie matching "Inception". Check the spelling, or pick from the suggestions that appear as you type.',
     ],
     ["search rejects", () => mocks.searchMovie.mockRejectedValue(new Error("SECRET-1")), GENERIC],
     ["find rejects", () => mocks.findMovieByTmdbId.mockRejectedValue(new Error("SECRET-2")), GENERIC],
@@ -256,7 +256,7 @@ describe("non-success follow-up: DELETE then ephemeral POST", () => {
       expect(calls.map((c) => c.method)).toEqual(["DELETE", "POST"]);
       expect(calls[1].url).toBe(BASE);
       expect(calls[1].body).toEqual({
-        content: 'Couldn\'t find a movie matching "Inception".',
+        content: 'Couldn\'t find a movie matching "Inception". Check the spelling, or pick from the suggestions that appear as you type.',
         flags: 64,
       });
     },

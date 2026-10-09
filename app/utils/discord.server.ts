@@ -22,7 +22,7 @@ export type DiscordInteraction = {
   user?: DiscordUser;
   data?: {
     name?: string;
-    options?: { name: string; value?: unknown }[];
+    options?: { name: string; value?: unknown; focused?: boolean }[];
   };
 };
 
@@ -31,6 +31,7 @@ export type TmdbSearchResult = {
   title: string;
   release_date?: string | null;
   poster_path?: string | null;
+  vote_count?: number;
 };
 
 export const MSG_NOT_SUPPORTED = "This command is not supported.";
@@ -135,10 +136,82 @@ export function buildSuccessMessage(
   result: TmdbSearchResult,
   selectedBy: string,
 ): string {
-  const year = (result.release_date ?? "").slice(0, 4);
-  const label = year ? `${result.title} (${year})` : result.title;
-  return `Added **${label}** to Movie Vibes — picked by ${selectedBy}.`;
+  return `Added **${formatLabel(result)}** to Movie Vibes — picked by ${selectedBy}.`;
 }
 
 export const buildNotFoundMessage = (title: string) =>
-  `Couldn't find a movie matching "${title}".`;
+  `Couldn't find a movie matching "${title}". Check the spelling, or pick from the suggestions that appear as you type.`;
+
+// --- Autocomplete --------------------------------------------------------
+
+export const INTERACTION_AUTOCOMPLETE = 4;
+const RESPONSE_AUTOCOMPLETE_RESULT = 8;
+// Discord limits: 25 choices, 100 characters per choice name and value.
+const MAX_CHOICES = 25;
+const MAX_CHOICE_LENGTH = 100;
+export const MIN_AUTOCOMPLETE_QUERY = 2;
+
+export type AutocompleteChoice = { name: string; value: string };
+
+export const autocompleteResponse = (choices: AutocompleteChoice[]) =>
+  Response.json({ type: RESPONSE_AUTOCOMPLETE_RESULT, data: { choices } });
+
+export function getFocusedValue(interaction: DiscordInteraction): string {
+  const value = interaction.data?.options?.find((o) => o.focused)?.value;
+  return typeof value === "string" ? value.trim() : "";
+}
+
+// A picked suggestion submits "tmdb:<id>" instead of free text.
+const CHOICE_PREFIX = "tmdb:";
+
+export function parseTmdbChoice(value: string): number | undefined {
+  const match = /^tmdb:(\d{1,10})$/.exec(value);
+  return match ? Number(match[1]) : undefined;
+}
+
+function formatLabel(result: TmdbSearchResult): string {
+  const year = (result.release_date ?? "").slice(0, 4);
+  return year ? `${result.title} (${year})` : result.title;
+}
+
+export function buildChoices(results: TmdbSearchResult[]): AutocompleteChoice[] {
+  return results.slice(0, MAX_CHOICES).map((result) => {
+    const label = formatLabel(result);
+    return {
+      name:
+        label.length > MAX_CHOICE_LENGTH
+          ? `${label.slice(0, MAX_CHOICE_LENGTH - 1)}…`
+          : label,
+      value: `${CHOICE_PREFIX}${result.id}`,
+    };
+  });
+}
+
+// --- Ranking -------------------------------------------------------------
+
+// Lowercase, strip accents and punctuation so "crouching tiger hidden dragon"
+// equals "Crouching Tiger, Hidden Dragon".
+export function normalizeTitle(title: string): string {
+  return title
+    .normalize("NFKD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim();
+}
+
+/**
+ * Exact title matches first (most-voted first, so the well-known film beats a
+ * remake or short with the same name), then TMDB's own relevance order.
+ */
+export function rankResults(
+  results: TmdbSearchResult[],
+  query: string,
+): TmdbSearchResult[] {
+  const target = normalizeTitle(query);
+  const exact = results
+    .filter((r) => normalizeTitle(r.title) === target)
+    .sort((a, b) => (b.vote_count ?? 0) - (a.vote_count ?? 0));
+  return [...exact, ...results.filter((r) => !exact.includes(r))];
+}

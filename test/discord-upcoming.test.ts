@@ -186,7 +186,7 @@ describe("Discord /add-movie saves UPCOMING via createMovie", () => {
     mocks.searchMovie.mockResolvedValue([]);
     await run(cmd({}, [{ name: "title", type: 3, value: "  Nope  " }]));
     const { content } = await finalContent();
-    expect(content).toBe(`Couldn't find a movie matching "Nope".`);
+    expect(content).toBe(`Couldn't find a movie matching "Nope". Check the spelling, or pick from the suggestions that appear as you type.`);
     expect(mocks.createMovie).not.toHaveBeenCalled();
     expect(mocks.saveToDB).not.toHaveBeenCalled();
   });

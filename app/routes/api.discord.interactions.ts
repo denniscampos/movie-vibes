@@ -1,49 +1,86 @@
 import type { Route } from "./+types/api.discord.interactions";
-import { searchMovie } from "services/tmdb";
+import { searchMovie, searchMovieById } from "services/tmdb";
 import { createMovie, findMovieByTmdbId } from "~/models/movie.server";
 import {
   INTERACTION_APPLICATION_COMMAND,
+  INTERACTION_AUTOCOMPLETE,
+  MIN_AUTOCOMPLETE_QUERY,
   INTERACTION_PING,
   MSG_ERROR,
   MSG_EXISTS,
   MSG_NOT_AVAILABLE,
   MSG_NOT_SUPPORTED,
   MSG_NO_TITLE,
+  autocompleteResponse,
+  buildChoices,
   buildNotFoundMessage,
   buildSaveInput,
   buildSuccessMessage,
   FLAG_EPHEMERAL,
   deferredPublic,
   ephemeralMessage,
+  getFocusedValue,
   getStringOption,
   isInvocationAllowed,
   parseIdList,
+  parseTmdbChoice,
   pongResponse,
+  rankResults,
   verifyDiscordRequest,
   type DiscordInteraction,
+  type TmdbSearchResult,
 } from "~/utils/discord.server";
 
 type Outcome = { content: string; success: boolean };
+
+// Autocomplete replies cannot be deferred and must arrive within 3 seconds.
+const AUTOCOMPLETE_TIMEOUT_MS = 2500;
+
+async function suggestMovies(query: string): Promise<Response> {
+  if (query.length < MIN_AUTOCOMPLETE_QUERY) return autocompleteResponse([]);
+  try {
+    const results = await Promise.race<TmdbSearchResult[] | undefined>([
+      searchMovie(query),
+      new Promise((resolve) =>
+        setTimeout(() => resolve(undefined), AUTOCOMPLETE_TIMEOUT_MS),
+      ),
+    ]);
+    return autocompleteResponse(buildChoices(rankResults(results ?? [], query)));
+  } catch {
+    console.error("Discord autocomplete search failed");
+    return autocompleteResponse([]);
+  }
+}
+
+// A picked suggestion ("tmdb:<id>") is fetched exactly; free text falls back
+// to a search and the best-ranked result.
+async function resolveMovie(
+  title: string,
+): Promise<TmdbSearchResult | undefined> {
+  const tmdbId = parseTmdbChoice(title);
+  if (tmdbId !== undefined) return searchMovieById(String(tmdbId));
+  const results: TmdbSearchResult[] = (await searchMovie(title)) ?? [];
+  return rankResults(results, title)[0];
+}
 
 async function addMovie(
   interaction: DiscordInteraction,
   title: string,
 ): Promise<Outcome> {
   try {
-    const results = await searchMovie(title);
-    if (!results || results.length === 0) {
+    const movie = await resolveMovie(title);
+    if (!movie) {
       return { content: buildNotFoundMessage(title), success: false };
     }
 
-    const first = results[0];
-    if (await findMovieByTmdbId(first.id)) {
+    if (await findMovieByTmdbId(movie.id)) {
       return { content: MSG_EXISTS, success: false };
     }
 
-    const input = buildSaveInput(first, interaction);
+    const input = buildSaveInput(movie, interaction);
     await createMovie(input);
     return {
-      content: buildSuccessMessage(first, input.selectedBy),
+      content: buildSuccessMessage(movie, input.selectedBy),
       success: true,
     };
   } catch (error) {
@@ -119,6 +156,20 @@ export async function action({ request }: Route.ActionArgs) {
   }
 
   if (interaction.type === INTERACTION_PING) return pongResponse();
+
+  if (
+    interaction.type === INTERACTION_AUTOCOMPLETE &&
+    interaction.data?.name === "add-movie"
+  ) {
+    const allowed = isInvocationAllowed(
+      interaction,
+      parseIdList(process.env.DISCORD_ALLOWED_GUILD_IDS),
+      parseIdList(process.env.DISCORD_ALLOWED_USER_IDS),
+    );
+    // Outside the allowlist: no suggestions (the command itself is refused).
+    if (!allowed) return autocompleteResponse([]);
+    return suggestMovies(getFocusedValue(interaction));
+  }
 
   if (
     interaction.type !== INTERACTION_APPLICATION_COMMAND ||

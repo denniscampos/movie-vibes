@@ -121,7 +121,7 @@ afterEach(() => {
 });
 
 describe("command definition", () => {
-  it("has install types, contexts and unchanged options", () => {
+  it("has install types, contexts and options (title autocompletes)", () => {
     expect(addMovieCommand.integration_types).toEqual([0, 1]);
     expect(addMovieCommand.contexts).toEqual([0, 1, 2]);
     expect(addMovieCommand.name).toBe("add-movie");
@@ -132,6 +132,7 @@ describe("command definition", () => {
         description: "Movie title to add",
         type: 3,
         required: true,
+        autocomplete: true,
       },
       {
         name: "picked-by",
