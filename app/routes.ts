@@ -9,4 +9,5 @@ export default [
   route("movies/genre/:genreId", "./routes/movies/genre/genreId.tsx"),
   route("search", "./routes/search.tsx"),
   route("browse", "./routes/browse.tsx"),
+  route("api/discord/interactions", "./routes/api.discord.interactions.ts"),
 ] satisfies RouteConfig;
