@@ -56,7 +56,7 @@ https://<railway-domain>/api/discord/interactions   ← new resource route in th
    │  1. verify Ed25519 signature
    │  2. authorize invoker
    │  3. searchMovie(title)            (services/tmdb.ts — existing)
-   │  4. saveToDB(...) / createMovie() (app/models/movie.server.ts — existing)
+   │  4. createMovie(...)               (app/models/movie.server.ts — existing)
    ▼
 Response: confirmation message shown in Discord
 ```
@@ -127,13 +127,13 @@ The interaction handler must produce exactly what the existing persistence funct
 | `imageUrl`    | TMDB `poster_path` (already full URL via `withImageUrl` in `services/tmdb.ts`) |
 | `tmdbId`      | TMDB result `id`                                                       |
 | `selectedBy`  | `picked-by` option if provided, else invoker's Discord display name    |
-| `status`      | Defaults to `NOT_WATCHED`                                              |
-| `category`    | Defaults to `""` (empty) — matches existing `saveToDB` behavior        |
+| `status`      | Always `UPCOMING` for Discord adds                                     |
+| `category`    | `""` (empty) — same empty category row `saveToDB` creates              |
 
-**Preferred persistence call:** `saveToDB({ movieName, releaseDate, imageUrl, tmdbId, selectedBy })`
-in `app/models/movie.server.ts`, because it already implements the "minimal record, fill in later"
-pattern (`status: NOT_WATCHED`, empty category). Only use `createMovie` if v1 is extended to accept
-category/status options.
+**Persistence call:** `createMovie({ movieName, releaseDate, selectedBy, categoryName: "", status: MovieStatus.UPCOMING, imageUrl, tmdbId })`
+in `app/models/movie.server.ts`. `createMovie` stores `releaseDate` as given, so the handler passes the
+year only (first four characters of `release_date`, or `""` when missing). Discord adds are saved as
+`UPCOMING`; the website's add flow (`saveToDB`) still saves `NOT_WATCHED`.
 
 **Invoker display name:** `interaction.member?.user?.global_name ?? interaction.member?.user?.username ?? interaction.user?.global_name ?? interaction.user?.username` (guild vs DM shapes differ). Fall back to `"Discord"` if absent.
 
@@ -166,7 +166,7 @@ Command handling order:
 5. **No results** → ephemeral reply: `Couldn't find a movie matching "<title>".`
 6. **Results** → take the **first result** (best match; `searchMovie` returns TMDB relevance order).
 7. **Duplicate check** → look up an existing movie by the matched `tmdbId` **before** inserting. If one already exists, do **not** write; reply ephemeral: `This movie already exists.` (§7a).
-8. Build the field mapping (§7), call `saveToDB(...)`.
+8. Build the field mapping (§7), call `createMovie(...)`.
    - Include the matched title + year in the confirmation so the user can spot a wrong match.
 9. **Success** → reply with a confirmation message (type `4`), e.g.
    `Added **The Last Dragon (1985)** to Movie Vibes — picked by @someone.`
@@ -248,7 +248,7 @@ TMDB vars already exist: `TMDB_API_URL`, `TMDB_API_TOKEN`, `TMDB_API_IMAGE_URL`.
 
 - **Unit (Vitest):**
   - Signature verification accepts a valid signature and rejects a tampered body/timestamp.
-  - Command parsing → `saveToDB` payload mapping is correct (title, year extraction, poster URL, selectedBy fallback).
+  - Command parsing → `createMovie` payload mapping is correct (title, year extraction, poster URL, selectedBy fallback).
   - Non-allowlisted guild/user is rejected.
 - **Manual (private server):**
   - Set the Interactions Endpoint URL to `https://<railway-domain>/api/discord/interactions`; Discord's "Save" performs a PING (must succeed and return PONG).
@@ -261,7 +261,7 @@ TMDB vars already exist: `TMDB_API_URL`, `TMDB_API_TOKEN`, `TMDB_API_IMAGE_URL`.
 
 ## 13. Acceptance criteria
 
-1. `/add-movie <title>` on the test server creates a movie row with correct `movieName`, `releaseDate` (year), `imageUrl`, `tmdbId`, `selectedBy`, `status = NOT_WATCHED`.
+1. `/add-movie <title>` on the test server creates a movie row with correct `movieName`, `releaseDate` (year), `imageUrl`, `tmdbId`, `selectedBy`, `status = UPCOMING`.
 2. Discord shows an ephemeral confirmation (from `Movie-Bot`) with the matched title/year.
 3. Running the same movie again replies `This movie already exists.` and does **not** create a second row.
 4. PING returns PONG so the endpoint URL saves successfully.
