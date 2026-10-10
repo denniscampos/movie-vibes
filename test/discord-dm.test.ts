@@ -22,6 +22,7 @@ import {
   commands,
   markWatchedCommand,
   randomMovieCommand,
+  spinCommand,
 } from "../app/utils/discord-commands";
 import { MovieStatus } from "~/lib/generated/prisma/enums";
 
@@ -172,6 +173,7 @@ describe("command definition", () => {
       addMovieCommand,
       randomMovieCommand,
       markWatchedCommand,
+      spinCommand,
     ]);
   });
 });

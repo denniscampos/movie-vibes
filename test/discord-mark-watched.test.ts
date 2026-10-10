@@ -142,9 +142,8 @@ describe("markWatchedCommand definition", () => {
     ]);
   });
 
-  it("is registered last", () => {
-    expect(commands.at(-1)).toBe(markWatchedCommand);
-    expect(commands).toHaveLength(3);
+  it("is registered", () => {
+    expect(commands).toContain(markWatchedCommand);
   });
 });
 

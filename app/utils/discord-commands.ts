@@ -71,8 +71,16 @@ export const markWatchedCommand = {
   ],
 };
 
+export const spinCommand = {
+  name: "spin",
+  description: "Spin the wheel: whose movie are we picking tonight?",
+  integration_types,
+  contexts,
+};
+
 export const commands = [
   addMovieCommand,
   randomMovieCommand,
   markWatchedCommand,
+  spinCommand,
 ];

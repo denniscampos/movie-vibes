@@ -4,6 +4,7 @@ import { handleMovieAction } from "~/actions/movie.server";
 import { Button, Poster, Wheel, type WheelName } from "~/components/mv";
 import { fetchUpcomingMovies } from "~/models/movie.server";
 import { requireLogin } from "~/utils/auth.server";
+import { uniquePickerNames } from "~/utils/pickers";
 import type { Route } from "./+types/home";
 
 export const meta: Route.MetaFunction = () => [
@@ -23,12 +24,8 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   const { upcomingMovies } = loaderData;
   const [result, setResult] = useState<WheelName | null>(null);
 
-  const names: WheelName[] = Array.from(
-    new Set(
-      upcomingMovies
-        .map((m) => m.selectedBy)
-        .filter((n): n is string => Boolean(n && n.trim())),
-    ),
+  const names: WheelName[] = uniquePickerNames(
+    upcomingMovies.map((m) => m.selectedBy),
   ).map((n) => ({ id: n, name: n }));
 
   return (
