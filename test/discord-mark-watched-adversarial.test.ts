@@ -116,6 +116,7 @@ import {
   commands,
   markWatchedCommand,
   randomMovieCommand,
+  spinCommand,
 } from "../app/utils/discord-commands";
 import { MSG_NOT_AVAILABLE } from "../app/utils/discord.server";
 
@@ -231,7 +232,7 @@ const choices = async (value: string) =>
     .data.choices;
 
 describe("command definition", () => {
-  it("defines markWatchedCommand and registers it last", () => {
+  it("defines markWatchedCommand and registers it", () => {
     expect(markWatchedCommand.name).toBe("mark-watched");
     expect(markWatchedCommand.description).toBeTruthy();
     expect(markWatchedCommand.integration_types).toEqual(addMovieCommand.integration_types);
@@ -244,7 +245,12 @@ describe("command definition", () => {
       required: true,
       autocomplete: true,
     });
-    expect(commands).toEqual([addMovieCommand, randomMovieCommand, markWatchedCommand]);
+    expect(commands).toEqual([
+      addMovieCommand,
+      randomMovieCommand,
+      markWatchedCommand,
+      spinCommand,
+    ]);
   });
 
   it("keeps the commands module free of server-only imports and updates the script header", () => {

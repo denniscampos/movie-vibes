@@ -199,13 +199,13 @@ describe("success follow-up", () => {
       { id: 5, title: "Foo", release_date: "", poster_path: null },
       "Added **Foo** to Movie Vibes — picked by Global.",
     ],
-  ])("%s: a single PATCH @original with {content} only", async (_n, make, found, content) => {
+  ])("%s: a single PATCH @original with {content} and mentions suppressed", async (_n, make, found, content) => {
     mocks.searchMovie.mockResolvedValue([found]);
     await run(make());
     await settle(1);
     expect(calls[0].method).toBe("PATCH");
     expect(calls[0].url).toBe(ORIGINAL);
-    expect(calls[0].body).toEqual({ content });
+    expect(calls[0].body).toEqual({ content, allowed_mentions: { parse: [] } });
     expect(calls[0].headers["content-type"]).toContain("application/json");
     expect(calls.some((c) => c.method === "DELETE" || c.method === "POST")).toBe(false);
     expectNoAuth(calls);
@@ -227,7 +227,7 @@ describe("non-success follow-up: DELETE then ephemeral POST", () => {
     ["search rejects", () => mocks.searchMovie.mockRejectedValue(new Error("SECRET-1")), GENERIC],
     ["find rejects", () => mocks.findMovieByTmdbId.mockRejectedValue(new Error("SECRET-2")), GENERIC],
     ["create rejects", () => mocks.createMovie.mockRejectedValue(new Error("SECRET-3")), GENERIC],
-  ])("%s -> DELETE then POST {content, flags:64}, no PATCH", async (_n, setup, msg) => {
+  ])("%s -> DELETE then POST {content, flags:64}, mentions suppressed, no PATCH", async (_n, setup, msg) => {
     silenceLogs();
     setup();
     for (const i of [cmd(), groupDm()]) {
@@ -238,7 +238,11 @@ describe("non-success follow-up: DELETE then ephemeral POST", () => {
       expect(calls[0].url).toBe(ORIGINAL);
       expect(calls[0].body).toBeUndefined();
       expect(calls[1].url).toBe(BASE);
-      expect(calls[1].body).toEqual({ content: msg, flags: 64 });
+      expect(calls[1].body).toEqual({
+        content: msg,
+        flags: 64,
+        allowed_mentions: { parse: [] },
+      });
       expect(calls[1].headers["content-type"]).toContain("application/json");
       expect(calls[1].rawBody).not.toContain("SECRET");
       expectNoAuth(calls);
@@ -258,6 +262,7 @@ describe("non-success follow-up: DELETE then ephemeral POST", () => {
       expect(calls[1].body).toEqual({
         content: 'Couldn\'t find a movie matching "Inception". Check the spelling, or pick from the suggestions that appear as you type.',
         flags: 64,
+        allowed_mentions: { parse: [] },
       });
     },
   );

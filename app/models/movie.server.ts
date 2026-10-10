@@ -1,5 +1,6 @@
 import db from "~/db.server";
 import { MovieStatus } from "~/lib/generated/prisma/enums";
+import { uniquePickerNames } from "~/utils/pickers";
 
 export const fetchMovies = async (searchQuery?: string) => {
   const movie = await db.movie.findMany({
@@ -303,4 +304,18 @@ export const pickRandomMovie = async ({
   });
   if (movies.length === 0) return undefined;
   return movies[Math.floor(Math.random() * movies.length)];
+};
+
+/**
+ * The /spin pick: a random name from the people with an UPCOMING movie, the
+ * same set the home-page wheel spins over. Undefined when nobody qualifies.
+ */
+export const pickRandomUpcomingPicker = async () => {
+  const movies = await db.movie.findMany({
+    where: { status: MovieStatus.UPCOMING },
+    select: { selectedBy: true },
+  });
+  const names = uniquePickerNames(movies.map((m) => m.selectedBy));
+  if (names.length === 0) return undefined;
+  return names[Math.floor(Math.random() * names.length)];
 };

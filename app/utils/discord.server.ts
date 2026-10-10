@@ -282,6 +282,16 @@ export const buildMarkedWatchedMessage = (movie: {
   releaseDate: string;
 }) => `✅ Marked **${formatMovieLabel(movie)}** as watched.`;
 
+// --- Spin ----------------------------------------------------------------
+
+export const MSG_NO_UPCOMING_PICKERS =
+  "No upcoming movies to spin for. Add one with /add-movie.";
+export const MSG_SPIN_ERROR =
+  "Something went wrong spinning the wheel. Please try again.";
+
+export const buildSpinMessage = (name: string) =>
+  `🎡 The wheel has spoken: **${name}** is picking tonight!`;
+
 // --- Random pick ---------------------------------------------------------
 
 export type RandomPick = {

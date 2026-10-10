@@ -242,6 +242,7 @@ describe("interactions route", () => {
     expect(init.method).toBe("PATCH");
     expect(JSON.parse(init.body)).toEqual({
       content: "Added **Dune (2021)** to Movie Vibes — picked by Display.",
+      allowed_mentions: { parse: [] },
     });
   });
 

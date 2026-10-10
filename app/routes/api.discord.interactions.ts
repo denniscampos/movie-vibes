@@ -8,6 +8,7 @@ import {
   findUpcomingMoviesByName,
   markUpcomingMovieWatched,
   pickRandomMovie,
+  pickRandomUpcomingPicker,
 } from "~/models/movie.server";
 import {
   INTERACTION_APPLICATION_COMMAND,
@@ -23,7 +24,9 @@ import {
   MSG_NO_MOVIE,
   MSG_NO_TITLE,
   MSG_NO_UPCOMING_MATCH,
+  MSG_NO_UPCOMING_PICKERS,
   MSG_RANDOM_ERROR,
+  MSG_SPIN_ERROR,
   autocompleteResponse,
   buildCategoryChoices,
   buildChoices,
@@ -34,6 +37,7 @@ import {
   buildNotFoundMessage,
   buildRandomPickMessage,
   buildSaveInput,
+  buildSpinMessage,
   buildSuccessMessage,
   FLAG_EPHEMERAL,
   deferredPublic,
@@ -146,6 +150,20 @@ async function randomMovie(categoryName: string): Promise<Outcome> {
   }
 }
 
+async function spin(): Promise<Outcome> {
+  try {
+    const name = await pickRandomUpcomingPicker();
+    if (!name) return { content: MSG_NO_UPCOMING_PICKERS, success: false };
+    return { content: buildSpinMessage(name), success: true };
+  } catch (error) {
+    console.error(
+      "Discord spin failed:",
+      error instanceof Error ? error.message : "unknown error",
+    );
+    return { content: MSG_SPIN_ERROR, success: false };
+  }
+}
+
 async function suggestUpcoming(query: string): Promise<Response> {
   try {
     const movies = await findUpcomingMovies(query);
@@ -206,11 +224,16 @@ async function discordRequest(
   }
 }
 
+// Content can carry user-entered text (e.g. a "picked by" name), so never let
+// it ping anyone: no @everyone, role or user mentions.
+const NO_MENTIONS = { parse: [] };
+
 async function sendFollowUp(token: string, { content, success }: Outcome) {
   const base = `https://discord.com/api/v10/webhooks/${process.env.DISCORD_APPLICATION_ID}/${token}`;
   if (success) {
     await discordRequest("edit", `${base}/messages/@original`, "PATCH", {
       content,
+      allowed_mentions: NO_MENTIONS,
     });
     return;
   }
@@ -218,6 +241,7 @@ async function sendFollowUp(token: string, { content, success }: Outcome) {
   await discordRequest("follow-up", base, "POST", {
     content,
     flags: FLAG_EPHEMERAL,
+    allowed_mentions: NO_MENTIONS,
   });
 }
 
@@ -249,7 +273,8 @@ export async function action({ request }: Route.ActionArgs) {
   const isKnownCommand =
     commandName === "add-movie" ||
     commandName === "random-movie" ||
-    commandName === "mark-watched";
+    commandName === "mark-watched" ||
+    commandName === "spin";
   const allowed = () =>
     isInvocationAllowed(
       interaction,
@@ -286,6 +311,8 @@ export async function action({ request }: Route.ActionArgs) {
   if (commandName === "random-movie") {
     const category = (getStringOption(interaction, "category") ?? "").trim();
     work = () => randomMovie(category);
+  } else if (commandName === "spin") {
+    work = () => spin();
   } else if (commandName === "mark-watched") {
     const movie = (getStringOption(interaction, "movie") ?? "").trim();
     if (!movie) return ephemeralMessage(MSG_NO_MOVIE);
