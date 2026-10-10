@@ -67,6 +67,8 @@ export default function LoginPage({ actionData }: Route.ComponentProps) {
             type="text"
             label="Username"
             autoComplete="username"
+            // The login form is the page's only task, so focus goes straight to it.
+            // oxlint-disable-next-line jsx-a11y/no-autofocus
             autoFocus
           />
           <Field

@@ -65,14 +65,7 @@ async function main() {
   const db = new PrismaClient({ adapter });
 
   try {
-    // `tmdbId` doesn't exist until the migration lands — cast to any until then.
-    const rows: Array<{
-      id: string;
-      movieName: string;
-      releaseDate: string;
-      imageUrl: string | null;
-      tmdbId: number | null;
-    }> = await (db.movie as any).findMany({
+    const rows = await db.movie.findMany({
       where: { tmdbId: null },
       select: {
         id: true,
@@ -101,7 +94,7 @@ async function main() {
           `  ✓ ${row.movieName} (${yearOf(row.releaseDate) ?? "?"})  →  tmdbId=${match.id}`,
         );
         if (apply) {
-          await (db.movie as any).update({
+          await db.movie.update({
             where: { id: row.id },
             data: { tmdbId: match.id },
           });

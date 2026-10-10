@@ -45,6 +45,8 @@ export function DataTable<TData, TValue>({
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
 
+  // TanStack Table isn't React Compiler-compatible; the compiler just skips memoizing here.
+  // oxlint-disable-next-line react/incompatible-library
   const table = useReactTable({
     data,
     columns,

@@ -1,3 +1,4 @@
+import { buttonProps } from "~/lib/activate-on-key";
 import { cn } from "~/lib/utils";
 
 export type PosterSize = "sm" | "md" | "lg" | "xl";
@@ -53,7 +54,7 @@ export function Poster({
 
   return (
     <div
-      onClick={onClick}
+      {...buttonProps(onClick)}
       className={cn(
         "relative flex aspect-2/3 flex-none flex-col justify-between rounded-[4px] border-2 border-ink-line p-[10px] transition-transform duration-150 ease-out",
         interactive && "cursor-pointer hover:-translate-y-[3px]",

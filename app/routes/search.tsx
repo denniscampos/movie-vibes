@@ -53,6 +53,8 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
               defaultValue={query}
               placeholder="try: paris, texas"
               autoComplete="off"
+              // Search is the page's only task, so focus goes straight to the input.
+              // oxlint-disable-next-line jsx-a11y/no-autofocus
               autoFocus
             />
           </div>

@@ -21,6 +21,8 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      - run: pnpm lint --format github
+
       - run: pnpm typecheck
         env:
           DATABASE_URL: postgresql://fake:fake@localhost:5432/fake
