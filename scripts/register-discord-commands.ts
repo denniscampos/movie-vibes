@@ -1,5 +1,5 @@
 /**
- * Registers the /add-movie and /random-movie commands globally with Discord
+ * Registers the /add-movie, /random-movie and /mark-watched commands globally with Discord
  * (idempotent PUT), installable to servers and user accounts, usable in servers, DMs and group
  * DMs. Global commands can take up to an hour to appear.
  *
