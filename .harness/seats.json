@@ -1,0 +1,9 @@
+{
+  "opencode-go": {
+    "models": [
+      "glm-5.3",
+      "kimi-k3"
+    ],
+    "when": "always"
+  }
+}

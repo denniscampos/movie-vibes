@@ -1,0 +1,12 @@
+{ "source": "search", "entries": [
+  { "symbol": "action", "file": "app/routes/api.discord.interactions.ts", "callers": [
+    { "file": "test/discord-upcoming.test.ts", "line": 19 },
+    { "file": "test/discord-autocomplete.test.ts", "line": 20 },
+    { "file": "test/discord-visibility.test.ts", "line": 16 },
+    { "file": "test/discord-adversarial.test.ts", "line": 16 },
+    { "file": "test/discord.server.test.ts", "line": 16 },
+    { "file": "test/discord-category-random.test.ts", "line": 24 } ] },
+  { "symbol": "commands", "file": "app/utils/discord-commands.ts", "callers": [
+    { "file": "scripts/register-discord-commands.ts", "symbol": "put", "line": 13 } ] },
+  { "symbol": "findUpcomingMovies, findUpcomingMoviesByName, markUpcomingMovieWatched", "file": "app/models/movie.server.ts", "callers": [] }
+], "note": "Code-graph coverage is missing; callers found by text search of the worktree. The route action is also mounted by file-system routing at /api/discord/interactions." }

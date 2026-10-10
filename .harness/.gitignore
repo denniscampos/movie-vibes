@@ -1,0 +1,7 @@
+tasks/*/state.json
+tasks/*/rounds/
+*.tmp
+tasks/*/coverage-snapshot.json
+tasks/*/coverage-map.json
+tasks/*/group-snapshot.json
+tasks/*/baselines/
