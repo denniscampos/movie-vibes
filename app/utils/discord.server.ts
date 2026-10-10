@@ -233,6 +233,55 @@ export function rankResults(
   return [...exact, ...results.filter((r) => !exact.includes(r))];
 }
 
+// --- Mark watched --------------------------------------------------------
+
+export type UpcomingMovie = { id: string; movieName: string; releaseDate: string };
+
+const MOVIE_CHOICE_PREFIX = "movie:";
+
+export const MSG_NO_MOVIE = "Please pick a movie to mark as watched.";
+export const MSG_MARK_WATCHED_ERROR =
+  "Something went wrong marking that movie as watched. Please try again.";
+export const MSG_NO_UPCOMING_MATCH =
+  "No upcoming movie matched that. Pick one from the suggestions that appear as you type.";
+export const MSG_AMBIGUOUS_UPCOMING =
+  "More than one upcoming movie has that name. Pick one from the suggestions that appear as you type.";
+
+export function parseMovieChoice(value: string): string | undefined {
+  const match = /^movie:(\S+)$/.exec(value);
+  return match ? match[1] : undefined;
+}
+
+export function formatMovieLabel(movie: {
+  movieName: string;
+  releaseDate: string;
+}): string {
+  return movie.releaseDate
+    ? `${movie.movieName} (${movie.releaseDate})`
+    : movie.movieName;
+}
+
+export function buildMovieChoices(movies: UpcomingMovie[]): AutocompleteChoice[] {
+  return movies
+    .map((movie) => ({
+      name: truncateChoiceName(formatMovieLabel(movie)),
+      value: `${MOVIE_CHOICE_PREFIX}${movie.id}`,
+    }))
+    .filter((choice) => choice.value.length <= MAX_CHOICE_LENGTH)
+    .slice(0, MAX_CHOICES);
+}
+
+function truncateChoiceName(label: string): string {
+  return label.length > MAX_CHOICE_LENGTH
+    ? `${label.slice(0, MAX_CHOICE_LENGTH - 1)}…`
+    : label;
+}
+
+export const buildMarkedWatchedMessage = (movie: {
+  movieName: string;
+  releaseDate: string;
+}) => `✅ Marked **${formatMovieLabel(movie)}** as watched.`;
+
 // --- Random pick ---------------------------------------------------------
 
 export type RandomPick = {

@@ -20,6 +20,7 @@ import { isInvocationAllowed } from "../app/utils/discord.server";
 import {
   addMovieCommand,
   commands,
+  markWatchedCommand,
   randomMovieCommand,
 } from "../app/utils/discord-commands";
 import { MovieStatus } from "~/lib/generated/prisma/enums";
@@ -167,7 +168,11 @@ describe("command definition", () => {
         autocomplete: true,
       }),
     ]);
-    expect(commands).toEqual([addMovieCommand, randomMovieCommand]);
+    expect(commands).toEqual([
+      addMovieCommand,
+      randomMovieCommand,
+      markWatchedCommand,
+    ]);
   });
 });
 

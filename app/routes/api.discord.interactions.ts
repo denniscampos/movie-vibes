@@ -4,6 +4,9 @@ import {
   createMovie,
   findCategoryNames,
   findMovieByTmdbId,
+  findUpcomingMovies,
+  findUpcomingMoviesByName,
+  markUpcomingMovieWatched,
   pickRandomMovie,
 } from "~/models/movie.server";
 import {
@@ -11,15 +14,22 @@ import {
   INTERACTION_AUTOCOMPLETE,
   MIN_AUTOCOMPLETE_QUERY,
   INTERACTION_PING,
+  MSG_AMBIGUOUS_UPCOMING,
   MSG_ERROR,
   MSG_EXISTS,
+  MSG_MARK_WATCHED_ERROR,
   MSG_NOT_AVAILABLE,
   MSG_NOT_SUPPORTED,
+  MSG_NO_MOVIE,
   MSG_NO_TITLE,
+  MSG_NO_UPCOMING_MATCH,
   MSG_RANDOM_ERROR,
   autocompleteResponse,
   buildCategoryChoices,
   buildChoices,
+  buildMarkedWatchedMessage,
+  buildMovieChoices,
+  parseMovieChoice,
   buildNoRandomPickMessage,
   buildNotFoundMessage,
   buildRandomPickMessage,
@@ -136,6 +146,41 @@ async function randomMovie(categoryName: string): Promise<Outcome> {
   }
 }
 
+async function suggestUpcoming(query: string): Promise<Response> {
+  try {
+    const movies = await findUpcomingMovies(query);
+    return autocompleteResponse(buildMovieChoices(movies));
+  } catch (error) {
+    console.error(
+      "Discord mark-watched autocomplete failed:",
+      error instanceof Error ? error.message : "unknown error",
+    );
+    return autocompleteResponse([]);
+  }
+}
+
+async function markWatched(movie: string): Promise<Outcome> {
+  try {
+    let id = parseMovieChoice(movie);
+    if (id === undefined) {
+      const matches = await findUpcomingMoviesByName(movie);
+      if (matches.length > 1) {
+        return { content: MSG_AMBIGUOUS_UPCOMING, success: false };
+      }
+      id = matches[0]?.id;
+    }
+    const marked = id ? await markUpcomingMovieWatched(id) : undefined;
+    if (!marked) return { content: MSG_NO_UPCOMING_MATCH, success: false };
+    return { content: buildMarkedWatchedMessage(marked), success: true };
+  } catch (error) {
+    console.error(
+      "Discord mark-watched failed:",
+      error instanceof Error ? error.message : "unknown error",
+    );
+    return { content: MSG_MARK_WATCHED_ERROR, success: false };
+  }
+}
+
 // Never throws and never logs the URL or token (error text may embed the URL).
 async function discordRequest(
   step: string,
@@ -202,7 +247,9 @@ export async function action({ request }: Route.ActionArgs) {
 
   const commandName = interaction.data?.name;
   const isKnownCommand =
-    commandName === "add-movie" || commandName === "random-movie";
+    commandName === "add-movie" ||
+    commandName === "random-movie" ||
+    commandName === "mark-watched";
   const allowed = () =>
     isInvocationAllowed(
       interaction,
@@ -214,6 +261,11 @@ export async function action({ request }: Route.ActionArgs) {
     // Outside the allowlist: no suggestions (the command itself is refused).
     if (!allowed()) return autocompleteResponse([]);
     const focused = getFocusedOption(interaction);
+    if (commandName === "mark-watched") {
+      return focused.name === "movie"
+        ? suggestUpcoming(focused.value)
+        : autocompleteResponse([]);
+    }
     if (focused.name === "category") {
       // /random-movie only suggests categories that still have something to pick.
       return suggestCategories(focused.value, commandName === "random-movie");
@@ -234,6 +286,10 @@ export async function action({ request }: Route.ActionArgs) {
   if (commandName === "random-movie") {
     const category = (getStringOption(interaction, "category") ?? "").trim();
     work = () => randomMovie(category);
+  } else if (commandName === "mark-watched") {
+    const movie = (getStringOption(interaction, "movie") ?? "").trim();
+    if (!movie) return ephemeralMessage(MSG_NO_MOVIE);
+    work = () => markWatched(movie);
   } else {
     const title = (getStringOption(interaction, "title") ?? "").trim();
     if (!title) return ephemeralMessage(MSG_NO_TITLE);

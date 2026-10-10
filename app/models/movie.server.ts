@@ -231,6 +231,51 @@ export const findCategoryNames = async (
   return names.slice(0, MAX_CATEGORY_SUGGESTIONS);
 };
 
+const MAX_UPCOMING_SUGGESTIONS = 25;
+
+/** UPCOMING movies whose name contains `query` (case-insensitive). */
+export const findUpcomingMovies = async (query: string) => {
+  return db.movie.findMany({
+    where: {
+      status: MovieStatus.UPCOMING,
+      movieName: { contains: query.trim(), mode: "insensitive" },
+    },
+    orderBy: { movieName: "asc" },
+    select: { id: true, movieName: true, releaseDate: true },
+    take: MAX_UPCOMING_SUGGESTIONS,
+  });
+};
+
+/** UPCOMING movies whose name equals `name` (case-insensitive); at most 2. */
+export const findUpcomingMoviesByName = async (name: string) => {
+  return db.movie.findMany({
+    where: {
+      status: MovieStatus.UPCOMING,
+      movieName: { equals: name.trim(), mode: "insensitive" },
+    },
+    select: { id: true, movieName: true, releaseDate: true },
+    take: 2,
+  });
+};
+
+/**
+ * Sets an UPCOMING movie to WATCHED. The write is conditional on the status
+ * still being UPCOMING, so other movies are never changed. Returns the movie
+ * label fields, or undefined when no UPCOMING movie had this id.
+ */
+export const markUpcomingMovieWatched = async (id: string) => {
+  const movie = await db.movie.findFirst({
+    where: { id, status: MovieStatus.UPCOMING },
+    select: { movieName: true, releaseDate: true },
+  });
+  if (!movie) return undefined;
+  const { count } = await db.movie.updateMany({
+    where: { id, status: MovieStatus.UPCOMING },
+    data: { status: MovieStatus.WATCHED },
+  });
+  return count > 0 ? movie : undefined;
+};
+
 /**
  * A random movie that hasn't been watched yet, optionally limited to a
  * category (case-insensitive exact match). Undefined when nothing qualifies.

@@ -55,4 +55,24 @@ export const randomMovieCommand = {
   ],
 };
 
-export const commands = [addMovieCommand, randomMovieCommand];
+export const markWatchedCommand = {
+  name: "mark-watched",
+  description: "Mark an upcoming movie as watched",
+  integration_types,
+  contexts,
+  options: [
+    {
+      name: "movie",
+      description: "Upcoming movie to mark as watched",
+      type: 3,
+      required: true,
+      autocomplete: true,
+    },
+  ],
+};
+
+export const commands = [
+  addMovieCommand,
+  randomMovieCommand,
+  markWatchedCommand,
+];
