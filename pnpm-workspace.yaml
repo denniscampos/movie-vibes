@@ -5,3 +5,8 @@ allowBuilds:
   '@prisma/engines': true
   esbuild: true
   prisma: true
+
+# Prisma pins these exactly; override to patched versions for security advisories.
+overrides:
+  deepmerge-ts: ^8.0.2
+  mysql2: ^3.24.5
