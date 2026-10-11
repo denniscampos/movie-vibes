@@ -14,8 +14,10 @@
  * Unmatched rows are logged for manual review; they are left untouched.
  */
 
-import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "../app/lib/generated/prisma/client";
+import { eq, isNull } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { Pool } from "pg";
+import { movie } from "../app/db/schema";
 import { searchMovie } from "../services/tmdb";
 
 type SearchResult = Awaited<ReturnType<typeof searchMovie>>[number];
@@ -61,20 +63,20 @@ function pickMatch(
 
 async function main() {
   const apply = process.argv.includes("--apply");
-  const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
-  const db = new PrismaClient({ adapter });
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL! });
+  const db = drizzle({ client: pool });
 
   try {
-    const rows = await db.movie.findMany({
-      where: { tmdbId: null },
-      select: {
-        id: true,
-        movieName: true,
-        releaseDate: true,
-        imageUrl: true,
-        tmdbId: true,
-      },
-    });
+    const rows = await db
+      .select({
+        id: movie.id,
+        movieName: movie.movieName,
+        releaseDate: movie.releaseDate,
+        imageUrl: movie.imageUrl,
+        tmdbId: movie.tmdbId,
+      })
+      .from(movie)
+      .where(isNull(movie.tmdbId));
 
     console.log(
       `[backfill] mode=${apply ? "APPLY" : "dry-run"} · candidates=${rows.length}`,
@@ -94,10 +96,10 @@ async function main() {
           `  ✓ ${row.movieName} (${yearOf(row.releaseDate) ?? "?"})  →  tmdbId=${match.id}`,
         );
         if (apply) {
-          await db.movie.update({
-            where: { id: row.id },
-            data: { tmdbId: match.id },
-          });
+          await db
+            .update(movie)
+            .set({ tmdbId: match.id })
+            .where(eq(movie.id, row.id));
           updated += 1;
         }
       } else {
@@ -126,7 +128,7 @@ async function main() {
       console.log("\n[backfill] dry run — re-run with --apply to write these updates.");
     }
   } finally {
-    await db.$disconnect();
+    await pool.end();
   }
 }
 

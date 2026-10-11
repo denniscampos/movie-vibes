@@ -1,57 +1,83 @@
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  exists,
+  ilike,
+  ne,
+  sql,
+} from "drizzle-orm";
+import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import db from "~/db.server";
-import { MovieStatus } from "~/lib/generated/prisma/enums";
+import { category, movie, MovieStatus } from "~/db/schema";
 import { uniquePickerNames } from "~/utils/pickers";
 
-export const fetchMovies = async (searchQuery?: string) => {
-  const movie = await db.movie.findMany({
-    where: {
-      movieName: {
-        contains: searchQuery,
-        mode: "insensitive",
-      },
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-    select: {
-      id: true,
-      movieName: true,
-      releaseDate: true,
-      selectedBy: true,
-      status: true,
-      category: {
-        select: {
-          name: true,
-        },
-      },
-    },
-  });
+/** `column` contains `value`, ignoring case; LIKE wildcards in `value` match literally. */
+const containsInsensitive = (column: AnyPgColumn, value: string) =>
+  ilike(column, `%${value.replace(/[\\%_]/g, "\\$&")}%`);
 
-  return movie;
+/** `column` equals `value`, ignoring case. */
+const equalsInsensitive = (column: AnyPgColumn, value: string) =>
+  eq(sql`lower(${column})`, sql`lower(${value})`);
+
+export const fetchMovies = async (searchQuery?: string) => {
+  return db
+    .select({
+      id: movie.id,
+      movieName: movie.movieName,
+      releaseDate: movie.releaseDate,
+      selectedBy: movie.selectedBy,
+      status: movie.status,
+      category: {
+        name: category.name,
+      },
+    })
+    .from(movie)
+    .innerJoin(category, eq(movie.categoryId, category.id))
+    .where(
+      searchQuery === undefined
+        ? undefined
+        : containsInsensitive(movie.movieName, searchQuery),
+    )
+    .orderBy(desc(movie.createdAt));
 };
 
 export const fetchUpcomingMovies = async () => {
-  const upcomingMovies = await db.movie.findMany({
-    where: {
-      status: MovieStatus.UPCOMING,
-    },
-    select: {
-      id: true,
-      tmdbId: true,
-      movieName: true,
-      releaseDate: true,
-      selectedBy: true,
+  return db
+    .select({
+      id: movie.id,
+      tmdbId: movie.tmdbId,
+      movieName: movie.movieName,
+      releaseDate: movie.releaseDate,
+      selectedBy: movie.selectedBy,
       category: {
-        select: {
-          name: true,
-        },
+        name: category.name,
       },
-      imageUrl: true,
-      status: true,
-    },
-  });
+      imageUrl: movie.imageUrl,
+      status: movie.status,
+    })
+    .from(movie)
+    .innerJoin(category, eq(movie.categoryId, category.id))
+    .where(eq(movie.status, MovieStatus.UPCOMING));
+};
 
-  return upcomingMovies;
+/** Inserts a movie together with its own category, atomically. */
+const insertMovieWithCategory = async (
+  categoryName: string,
+  values: Omit<typeof movie.$inferInsert, "categoryId">,
+) => {
+  return db.transaction(async (tx) => {
+    const [{ id: categoryId }] = await tx
+      .insert(category)
+      .values({ name: categoryName })
+      .returning({ id: category.id });
+    const [created] = await tx
+      .insert(movie)
+      .values({ ...values, categoryId })
+      .returning();
+    return created;
+  });
 };
 
 export const createMovie = async ({
@@ -71,20 +97,13 @@ export const createMovie = async ({
   imageUrl?: string;
   tmdbId?: number;
 }) => {
-  return db.movie.create({
-    data: {
-      category: {
-        create: {
-          name: categoryName,
-        },
-      },
-      movieName,
-      releaseDate,
-      selectedBy,
-      status,
-      imageUrl,
-      tmdbId,
-    },
+  return insertMovieWithCategory(categoryName, {
+    movieName,
+    releaseDate,
+    selectedBy,
+    status,
+    imageUrl,
+    tmdbId,
   });
 };
 
@@ -99,14 +118,13 @@ export const changeMovieStatus = async ({
     throw new Error("Movie ID is required");
   }
 
-  return db.movie.update({
-    where: {
-      id,
-    },
-    data: {
-      status,
-    },
-  });
+  const [updated] = await db
+    .update(movie)
+    .set({ status })
+    .where(eq(movie.id, id))
+    .returning();
+  if (!updated) throw new Error(`Movie ${id} not found`);
+  return updated;
 };
 
 export const saveToDB = async ({
@@ -123,21 +141,14 @@ export const saveToDB = async ({
   selectedBy: string;
 }) => {
   const getYear = releaseDate.split("-")[0];
-  return db.movie.create({
-    data: {
-      movieName,
-      releaseDate: getYear,
-      tmdbId,
-      // everything below will be empty since the goal is to update the movie later
-      category: {
-        create: {
-          name: "",
-        },
-      },
-      imageUrl,
-      status: MovieStatus.NOT_WATCHED,
-      selectedBy: selectedBy,
-    },
+  // everything except the basics stays empty since the goal is to update the movie later
+  return insertMovieWithCategory("", {
+    movieName,
+    releaseDate: getYear,
+    tmdbId,
+    imageUrl,
+    status: MovieStatus.NOT_WATCHED,
+    selectedBy: selectedBy,
   });
 };
 
@@ -158,20 +169,18 @@ export const updateMovie = async ({
     throw new Error("Movie ID is required");
   }
 
-  return await db.movie.update({
-    where: {
-      id: movieId,
-    },
-    data: {
-      movieName,
-      releaseDate,
-      selectedBy,
-      category: {
-        update: {
-          name: categoryName,
-        },
-      },
-    },
+  return db.transaction(async (tx) => {
+    const [updated] = await tx
+      .update(movie)
+      .set({ movieName, releaseDate, selectedBy })
+      .where(eq(movie.id, movieId))
+      .returning();
+    if (!updated) throw new Error(`Movie ${movieId} not found`);
+    await tx
+      .update(category)
+      .set({ name: categoryName })
+      .where(eq(category.id, updated.categoryId));
+    return updated;
   });
 };
 
@@ -181,18 +190,23 @@ export const removeMovies = async (movieIds: string[]) => {
   }
 
   await Promise.all(
-    movieIds.map((id) => {
-      return db.movie.delete({
-        where: {
-          id,
-        },
-      });
+    movieIds.map(async (id) => {
+      const deleted = await db
+        .delete(movie)
+        .where(eq(movie.id, id))
+        .returning({ id: movie.id });
+      if (deleted.length === 0) throw new Error(`Movie ${id} not found`);
     }),
   );
 };
 
 export const findMovieByTmdbId = async (tmdbId: number) => {
-  return db.movie.findFirst({ where: { tmdbId } });
+  const [found] = await db
+    .select()
+    .from(movie)
+    .where(eq(movie.tmdbId, tmdbId))
+    .limit(1);
+  return found ?? null;
 };
 
 const MAX_CATEGORY_SUGGESTIONS = 25;
@@ -206,18 +220,28 @@ export const findCategoryNames = async (
   query: string,
   { unwatchedOnly = false }: { unwatchedOnly?: boolean } = {},
 ) => {
-  const rows = await db.category.findMany({
-    where: {
-      name: { contains: query, mode: "insensitive", not: "" },
-      movies: {
-        some: unwatchedOnly ? { status: { not: MovieStatus.WATCHED } } : {},
-      },
-    },
-    distinct: ["name"],
-    orderBy: { name: "asc" },
-    select: { name: true },
-    take: 100,
-  });
+  const rows = await db
+    .selectDistinct({ name: category.name })
+    .from(category)
+    .where(
+      and(
+        containsInsensitive(category.name, query),
+        ne(category.name, ""),
+        exists(
+          db
+            .select({ one: sql`1` })
+            .from(movie)
+            .where(
+              and(
+                eq(movie.categoryId, category.id),
+                unwatchedOnly ? ne(movie.status, MovieStatus.WATCHED) : undefined,
+              ),
+            ),
+        ),
+      ),
+    )
+    .orderBy(asc(category.name))
+    .limit(100);
 
   // `distinct` is case-sensitive; collapse "Horror" / "horror" into one.
   const seen = new Set<string>();
@@ -236,27 +260,39 @@ const MAX_UPCOMING_SUGGESTIONS = 25;
 
 /** UPCOMING movies whose name contains `query` (case-insensitive). */
 export const findUpcomingMovies = async (query: string) => {
-  return db.movie.findMany({
-    where: {
-      status: MovieStatus.UPCOMING,
-      movieName: { contains: query.trim(), mode: "insensitive" },
-    },
-    orderBy: { movieName: "asc" },
-    select: { id: true, movieName: true, releaseDate: true },
-    take: MAX_UPCOMING_SUGGESTIONS,
-  });
+  return db
+    .select({
+      id: movie.id,
+      movieName: movie.movieName,
+      releaseDate: movie.releaseDate,
+    })
+    .from(movie)
+    .where(
+      and(
+        eq(movie.status, MovieStatus.UPCOMING),
+        containsInsensitive(movie.movieName, query.trim()),
+      ),
+    )
+    .orderBy(asc(movie.movieName))
+    .limit(MAX_UPCOMING_SUGGESTIONS);
 };
 
 /** UPCOMING movies whose name equals `name` (case-insensitive); at most 2. */
 export const findUpcomingMoviesByName = async (name: string) => {
-  return db.movie.findMany({
-    where: {
-      status: MovieStatus.UPCOMING,
-      movieName: { equals: name.trim(), mode: "insensitive" },
-    },
-    select: { id: true, movieName: true, releaseDate: true },
-    take: 2,
-  });
+  return db
+    .select({
+      id: movie.id,
+      movieName: movie.movieName,
+      releaseDate: movie.releaseDate,
+    })
+    .from(movie)
+    .where(
+      and(
+        eq(movie.status, MovieStatus.UPCOMING),
+        equalsInsensitive(movie.movieName, name.trim()),
+      ),
+    )
+    .limit(2);
 };
 
 /**
@@ -265,16 +301,12 @@ export const findUpcomingMoviesByName = async (name: string) => {
  * label fields, or undefined when no UPCOMING movie had this id.
  */
 export const markUpcomingMovieWatched = async (id: string) => {
-  const movie = await db.movie.findFirst({
-    where: { id, status: MovieStatus.UPCOMING },
-    select: { movieName: true, releaseDate: true },
-  });
-  if (!movie) return undefined;
-  const { count } = await db.movie.updateMany({
-    where: { id, status: MovieStatus.UPCOMING },
-    data: { status: MovieStatus.WATCHED },
-  });
-  return count > 0 ? movie : undefined;
+  const [updated] = await db
+    .update(movie)
+    .set({ status: MovieStatus.WATCHED })
+    .where(and(eq(movie.id, id), eq(movie.status, MovieStatus.UPCOMING)))
+    .returning({ movieName: movie.movieName, releaseDate: movie.releaseDate });
+  return updated;
 };
 
 /**
@@ -284,24 +316,23 @@ export const markUpcomingMovieWatched = async (id: string) => {
 export const pickRandomMovie = async ({
   categoryName,
 }: { categoryName?: string } = {}) => {
-  const movies = await db.movie.findMany({
-    where: {
-      status: { not: MovieStatus.WATCHED },
-      ...(categoryName
-        ? {
-            category: {
-              name: { equals: categoryName, mode: "insensitive" },
-            },
-          }
-        : {}),
-    },
-    select: {
-      movieName: true,
-      releaseDate: true,
-      selectedBy: true,
-      category: { select: { name: true } },
-    },
-  });
+  const movies = await db
+    .select({
+      movieName: movie.movieName,
+      releaseDate: movie.releaseDate,
+      selectedBy: movie.selectedBy,
+      category: { name: category.name },
+    })
+    .from(movie)
+    .innerJoin(category, eq(movie.categoryId, category.id))
+    .where(
+      and(
+        ne(movie.status, MovieStatus.WATCHED),
+        categoryName
+          ? equalsInsensitive(category.name, categoryName)
+          : undefined,
+      ),
+    );
   if (movies.length === 0) return undefined;
   return movies[Math.floor(Math.random() * movies.length)];
 };
@@ -311,10 +342,10 @@ export const pickRandomMovie = async ({
  * same set the home-page wheel spins over. Undefined when nobody qualifies.
  */
 export const pickRandomUpcomingPicker = async () => {
-  const movies = await db.movie.findMany({
-    where: { status: MovieStatus.UPCOMING },
-    select: { selectedBy: true },
-  });
+  const movies = await db
+    .select({ selectedBy: movie.selectedBy })
+    .from(movie)
+    .where(eq(movie.status, MovieStatus.UPCOMING));
   const names = uniquePickerNames(movies.map((m) => m.selectedBy));
   if (names.length === 0) return undefined;
   return names[Math.floor(Math.random() * names.length)];

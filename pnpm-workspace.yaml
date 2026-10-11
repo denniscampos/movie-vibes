@@ -2,11 +2,8 @@ packages:
   - "."
 
 allowBuilds:
-  '@prisma/engines': true
   esbuild: true
-  prisma: true
 
-# Prisma pins these exactly; override to patched versions for security advisories.
+# drizzle-kit's legacy loader pins an esbuild with a dev-server advisory.
 overrides:
-  deepmerge-ts: ^8.0.2
-  mysql2: ^3.24.5
+  '@esbuild-kit/core-utils>esbuild': ^0.25.12

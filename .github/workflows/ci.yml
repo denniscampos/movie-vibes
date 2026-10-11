@@ -24,8 +24,6 @@ jobs:
       - run: pnpm lint --format github
 
       - run: pnpm typecheck
-        env:
-          DATABASE_URL: postgresql://fake:fake@localhost:5432/fake
       - run: pnpm test run
 
   e2e:
@@ -45,7 +43,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     env:
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/movie_vibes?schema=public
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/movie_vibes
       TMDB_API_URL: https://api.themoviedb.org/3
       TMDB_API_TOKEN: ${{ secrets.TMDB_API_TOKEN }}
       TMDB_API_IMAGE_URL: https://image.tmdb.org/t/p/w1280
@@ -64,9 +62,7 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - run: pnpm exec prisma migrate deploy
-
-      - run: pnpm exec prisma generate
+      - run: pnpm db:migrate
 
       - run: pnpm exec playwright install --with-deps chromium
 

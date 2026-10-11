@@ -2,109 +2,69 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { generateKeyPairSync, sign } from "node:crypto";
 import { readFileSync } from "node:fs";
 
-// In-memory stand-in for the Prisma client so the real model layer runs and
-// we assert on behaviour (rows changed) rather than on helper names.
+// The real model layer runs against an in-process Postgres. A thin proxy over
+// the database records writes and can fail every query or interfere right
+// before an UPDATE, so we assert on behaviour (rows changed).
 type Row = {
   id: string;
   movieName: string;
   releaseDate: string;
-  status: string;
+  status: MovieStatus;
   selectedBy: string;
   tmdbId: number | null;
-  categoryId: string | null;
+  categoryId: string;
   imageUrl: string | null;
 };
 
 const state = vi.hoisted(() => ({
-  rows: [] as Row[],
   writes: [] as { method: string; args: unknown }[],
   failAll: false,
-  // Runs after every read, to simulate a concurrent change between lookup and write.
-  afterRead: undefined as undefined | (() => void),
+  // Runs right before the next UPDATE is sent, to simulate a concurrent change
+  // between lookup and write.
+  beforeWrite: undefined as undefined | (() => Promise<void>),
 }));
 
-type Cond = {
-  mode?: string;
-  equals?: unknown;
-  contains?: string;
-  in?: unknown[];
-  not?: unknown;
-};
-type Where = Record<string, unknown>;
-type Args = { where?: Where; data?: Record<string, unknown>; take?: number };
-
-function matches(row: Record<string, unknown>, where?: Where): boolean {
-  if (!where) return true;
-  return Object.entries(where).every(([key, rawCond]) => {
-    const group = rawCond as Where | Where[];
-    if (key === "AND") return [group].flat().every((w) => matches(row, w));
-    if (key === "OR") return [group].flat().some((w) => matches(row, w));
-    if (key === "NOT") return ![group].flat().some((w) => matches(row, w));
-    const cond = rawCond as Cond;
-    const v = row[key];
-    if (cond && typeof cond === "object" && !Array.isArray(cond)) {
-      const insensitive = cond.mode === "insensitive";
-      const norm = (s: unknown) =>
-        insensitive ? String(s).toLowerCase() : String(s);
-      if ("equals" in cond && norm(v) !== norm(cond.equals)) return false;
-      if ("contains" in cond && !norm(v).includes(norm(cond.contains ?? "")))
-        return false;
-      if ("in" in cond && !(cond.in as unknown[]).includes(v)) return false;
-      if ("not" in cond && v === cond.not) return false;
-      return true;
-    }
-    return v === cond;
+vi.mock("~/db.server", async () => {
+  const real = await (await import("./helpers/test-db")).createTestDb();
+  const queries = ["select", "selectDistinct", "insert", "update", "delete", "transaction", "execute"];
+  const db = new Proxy(real, {
+    get(target, prop) {
+      const value = Reflect.get(target, prop);
+      if (typeof prop !== "string" || !queries.includes(prop)) return value;
+      if (state.failAll) {
+        return () => {
+          throw new Error("db exploded");
+        };
+      }
+      if (prop === "insert" || prop === "delete") {
+        return (table: never) => {
+          state.writes.push({ method: prop, args: {} });
+          return target[prop](table);
+        };
+      }
+      if (prop === "update") {
+        return (table: never) => {
+          const builder = target.update(table);
+          const set = builder.set.bind(builder);
+          builder.set = ((data: Record<string, unknown>) => {
+            state.writes.push({ method: "update", args: { data } });
+            const query = set(data as never);
+            const execute = query.execute.bind(query);
+            query.execute = (async (...a: never[]) => {
+              const hook = state.beforeWrite;
+              state.beforeWrite = undefined;
+              await hook?.();
+              return execute(...a);
+            }) as never;
+            return query;
+          }) as never;
+          return builder;
+        };
+      }
+      return (value as (...a: unknown[]) => unknown).bind(target);
+    },
   });
-}
-
-vi.mock("~/db.server", () => {
-  const guard = () => {
-    if (state.failAll) throw new Error("db exploded");
-  };
-  const read = <T>(fn: () => T): T => {
-    guard();
-    const out = fn();
-    state.afterRead?.();
-    return out;
-  };
-  const movie = {
-    findMany: async (args: Args = {}) =>
-      read(() => {
-        let r = state.rows
-          .filter((x) => matches(x, args.where))
-          .map((x) => ({ ...x, category: null }));
-        if (typeof args.take === "number") r = r.slice(0, args.take);
-        return r;
-      }),
-    findFirst: async (args: Args = {}) =>
-      read(() => {
-        const f = state.rows.find((x) => matches(x, args.where));
-        return f ? { ...f, category: null } : null;
-      }),
-    findUnique: async (args: Args = {}) =>
-      read(() => {
-        const f = state.rows.find((x) => matches(x, args.where));
-        return f ? { ...f, category: null } : null;
-      }),
-    count: async (args: Args = {}) =>
-      read(() => state.rows.filter((x) => matches(x, args.where)).length),
-    updateMany: async (args: Args) => {
-      guard();
-      state.writes.push({ method: "updateMany", args });
-      const hit = state.rows.filter((x) => matches(x, args.where));
-      hit.forEach((x) => Object.assign(x, args.data ?? {}));
-      return { count: hit.length };
-    },
-    update: async (args: Args) => {
-      guard();
-      state.writes.push({ method: "update", args });
-      const hit = state.rows.find((x) => matches(x, args.where));
-      if (!hit) throw new Error("Record to update not found. P2025");
-      Object.assign(hit, args.data ?? {});
-      return { ...hit };
-    },
-  };
-  return { default: { movie, $transaction: async (fn: (tx: unknown) => unknown) => fn({ movie }) } };
+  return { default: db, realDb: real };
 });
 
 const tmdb = vi.hoisted(() => ({ searchMovie: vi.fn(), searchMovieById: vi.fn() }));
@@ -119,6 +79,13 @@ import {
   spinCommand,
 } from "../app/utils/discord-commands";
 import { MSG_NOT_AVAILABLE } from "../app/utils/discord.server";
+import { eq } from "drizzle-orm";
+import * as dbServer from "~/db.server";
+import { category, movie, MovieStatus } from "~/db/schema";
+import { resetTestDb, type TestDb } from "./helpers/test-db";
+
+// The unwrapped database, for seeding and inspecting without being recorded.
+const realDb = (dbServer as unknown as { realDb: TestDb }).realDb;
 
 const { publicKey, privateKey } = generateKeyPairSync("ed25519");
 const PUBLIC_HEX = publicKey
@@ -199,23 +166,44 @@ async function outcome() {
   return { ok: false, content: post.body!.content, calls: s };
 }
 
-const status = (id: string) => state.rows.find((r) => r.id === id)!.status;
+const rowColumns = {
+  id: movie.id,
+  movieName: movie.movieName,
+  releaseDate: movie.releaseDate,
+  status: movie.status,
+  selectedBy: movie.selectedBy,
+  tmdbId: movie.tmdbId,
+  categoryId: movie.categoryId,
+  imageUrl: movie.imageUrl,
+};
+const allRows = (): Promise<Row[]> =>
+  realDb.select(rowColumns).from(movie).orderBy(movie.id);
+const findRow = async (id: string) =>
+  (await realDb.select(rowColumns).from(movie).where(eq(movie.id, id)))[0];
+const status = async (id: string) => (await findRow(id))!.status;
+const addRows = (rows: Row[]) => realDb.insert(movie).values(rows);
+const setRows = async (rows: Row[]) => {
+  await realDb.delete(movie);
+  await addRows(rows);
+};
 
-beforeEach(() => {
+beforeEach(async () => {
   process.env.DISCORD_PUBLIC_KEY = PUBLIC_HEX;
   process.env.DISCORD_APPLICATION_ID = "app123";
   process.env.DISCORD_ALLOWED_GUILD_IDS = "g1";
   process.env.DISCORD_ALLOWED_USER_IDS = "";
   state.failAll = false;
-  state.afterRead = undefined;
+  state.beforeWrite = undefined;
   state.writes = [];
-  state.rows = [
+  await resetTestDb(realDb);
+  await realDb.insert(category).values({ id: "c1", name: "" });
+  await addRows([
     row({ id: "a1", movieName: "Inception" }),
     row({ id: "a2", movieName: "Heat", releaseDate: "1995" }),
     row({ id: "a3", movieName: "Nameless", releaseDate: "" }),
     row({ id: "w1", movieName: "Alien", status: "WATCHED", releaseDate: "1979" }),
     row({ id: "n1", movieName: "Inside Out", status: "NOT_WATCHED", releaseDate: "2015" }),
-  ];
+  ]);
   fetchMock = vi.fn().mockResolvedValue(new Response("{}", { status: 200 }));
   vi.stubGlobal("fetch", fetchMock);
   errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
@@ -272,7 +260,7 @@ describe("allowlist", () => {
     const ac = await run(cmd("", 4));
     expect(await ac.json()).toEqual({ type: 8, data: { choices: [] } });
     await new Promise((r) => setTimeout(r, 20));
-    expect(status("a1")).toBe("UPCOMING");
+    expect(await status("a1")).toBe("UPCOMING");
     expect(state.writes).toEqual([]);
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -297,9 +285,10 @@ describe("allowlist", () => {
 
 describe("autocomplete", () => {
   it("lists only UPCOMING movies, filtered case-insensitively and trimmed", async () => {
+    // Sorted by name, as the query asks.
     expect(await choices("")).toEqual([
-      { name: "Inception (2010)", value: "movie:a1" },
       { name: "Heat (1995)", value: "movie:a2" },
+      { name: "Inception (2010)", value: "movie:a1" },
       { name: "Nameless", value: "movie:a3" },
     ]);
     expect(await choices("   ")).toHaveLength(3);
@@ -315,12 +304,14 @@ describe("autocomplete", () => {
   });
 
   it("caps at 25 choices and truncates names to 100 chars", async () => {
-    state.rows = Array.from({ length: 40 }, (_, i) =>
-      row({ id: `id${i}`, movieName: `Film ${i}` }),
+    await setRows(
+      Array.from({ length: 40 }, (_, i) =>
+        row({ id: `id${i}`, movieName: `Film ${i}` }),
+      ),
     );
     expect(await choices("film")).toHaveLength(25);
 
-    state.rows = [row({ id: "long1", movieName: "x".repeat(300), releaseDate: "2001" })];
+    await setRows([row({ id: "long1", movieName: "x".repeat(300), releaseDate: "2001" })]);
     const [c] = await choices("");
     expect(c.name.length).toBeLessThanOrEqual(100);
     expect(c.name.startsWith("xxxx")).toBe(true);
@@ -388,17 +379,23 @@ describe("command: input handling", () => {
 
 describe("command: marking by id", () => {
   it("marks an UPCOMING movie watched, writing only status, and PATCHes publicly", async () => {
-    const before = structuredClone(state.rows);
+    const before = await allRows();
     await run(cmd("movie:a1"));
     const out = await outcome();
     expect(out.ok).toBe(true);
     expect(out.content).toBe("✅ Marked **Inception (2010)** as watched.");
     expect(out.calls.some((c) => c.method === "DELETE")).toBe(false);
 
-    const after = state.rows.find((r) => r.id === "a1")!;
-    expect(after).toEqual({ ...before[0], status: "WATCHED" });
+    const after = await allRows();
+    expect(after.find((r) => r.id === "a1")).toEqual({
+      ...before.find((r) => r.id === "a1"),
+      status: "WATCHED",
+    });
     // Every other row untouched.
-    expect(state.rows.filter((r) => r.id !== "a1")).toEqual(before.slice(1));
+    expect(after.filter((r) => r.id !== "a1")).toEqual(
+      before.filter((r) => r.id !== "a1"),
+    );
+    expect(state.writes).toHaveLength(1);
     for (const w of state.writes) {
       expect(Object.keys((w.args as { data: object }).data)).toEqual(["status"]);
       expect((w.args as { data: { status: string } }).data.status).toBe("WATCHED");
@@ -419,33 +416,31 @@ describe("command: marking by id", () => {
       expect(out.content).toMatch(/no upcoming movie/i);
       expect(out.content).toMatch(/suggestion/i);
     }
-    expect(status("n1")).toBe("NOT_WATCHED");
-    expect(status("w1")).toBe("WATCHED");
-    expect(status("a1")).toBe("UPCOMING");
+    expect(await status("n1")).toBe("NOT_WATCHED");
+    expect(await status("w1")).toBe("WATCHED");
+    expect(await status("a1")).toBe("UPCOMING");
   });
 
   it("is conditional at write time: a status flip after lookup is not overwritten", async () => {
-    // After the first read, someone moves the movie to NOT_WATCHED.
-    state.afterRead = () => {
-      state.rows.find((r) => r.id === "a1")!.status = "NOT_WATCHED";
-      state.afterRead = undefined;
+    // Right before the write, someone moves the movie to NOT_WATCHED.
+    state.beforeWrite = async () => {
+      await realDb.update(movie).set({ status: "NOT_WATCHED" }).where(eq(movie.id, "a1"));
     };
     await run(cmd("movie:a1"));
     const out = await outcome();
-    expect(status("a1")).toBe("NOT_WATCHED");
+    expect(await status("a1")).toBe("NOT_WATCHED");
     expect(out.ok).toBe(false);
     expect(out.content).toMatch(/no upcoming movie/i);
   });
 
   it("handles a movie deleted between lookup and write without throwing a generic error", async () => {
-    state.afterRead = () => {
-      state.rows = state.rows.filter((r) => r.id !== "a1");
-      state.afterRead = undefined;
+    state.beforeWrite = async () => {
+      await realDb.delete(movie).where(eq(movie.id, "a1"));
     };
     await run(cmd("movie:a1"));
     const out = await outcome();
     expect(out.ok).toBe(false);
-    expect(state.rows.find((r) => r.id === "a1")).toBeUndefined();
+    expect(await findRow("a1")).toBeUndefined();
   });
 
   it("is idempotent: running twice reports success once, then no match", async () => {
@@ -456,7 +451,7 @@ describe("command: marking by id", () => {
     const second = await outcome();
     expect(second.ok).toBe(false);
     expect(second.content).toMatch(/no upcoming movie/i);
-    expect(status("a2")).toBe("WATCHED");
+    expect(await status("a2")).toBe("WATCHED");
   });
 });
 
@@ -465,7 +460,7 @@ describe("command: marking by name", () => {
     await run(cmd("   hEaT  "));
     const out = await outcome();
     expect(out.content).toBe("✅ Marked **Heat (1995)** as watched.");
-    expect(status("a2")).toBe("WATCHED");
+    expect(await status("a2")).toBe("WATCHED");
   });
 
   it("does not partial-match names", async () => {
@@ -473,7 +468,7 @@ describe("command: marking by name", () => {
     const out = await outcome();
     expect(out.ok).toBe(false);
     expect(out.content).toMatch(/no upcoming movie/i);
-    expect(status("a1")).toBe("UPCOMING");
+    expect(await status("a1")).toBe("UPCOMING");
   });
 
   it("ignores non-UPCOMING movies with an equal name", async () => {
@@ -482,33 +477,33 @@ describe("command: marking by name", () => {
     fetchMock.mockClear();
     await run(cmd("Inside Out"));
     expect((await outcome()).content).toMatch(/no upcoming movie/i);
-    expect(status("w1")).toBe("WATCHED");
-    expect(status("n1")).toBe("NOT_WATCHED");
+    expect(await status("w1")).toBe("WATCHED");
+    expect(await status("n1")).toBe("NOT_WATCHED");
   });
 
   it("refuses to guess among several UPCOMING movies with the same name", async () => {
-    state.rows.push(
+    await addRows([
       row({ id: "d1", movieName: "Dune", releaseDate: "1984" }),
       row({ id: "d2", movieName: "Dune", releaseDate: "2021" }),
       row({ id: "d3", movieName: "Dune", releaseDate: "1984", status: "WATCHED" }),
-    );
+    ]);
     await run(cmd(" DUNE "));
     const out = await outcome();
     expect(out.ok).toBe(false);
     expect(out.content).toMatch(/suggestion/i);
     expect(out.content).not.toMatch(/no upcoming movie matched/i);
-    expect(status("d1")).toBe("UPCOMING");
-    expect(status("d2")).toBe("UPCOMING");
-    expect(status("d3")).toBe("WATCHED");
+    expect(await status("d1")).toBe("UPCOMING");
+    expect(await status("d2")).toBe("UPCOMING");
+    expect(await status("d3")).toBe("WATCHED");
     expect(state.writes).toEqual([]);
   });
 
   it("treats a movie:-looking value on a movie literally named that as an id, not a name", async () => {
-    state.rows.push(row({ id: "z1", movieName: "movie:a2" }));
+    await addRows([row({ id: "z1", movieName: "movie:a2" })]);
     await run(cmd("movie:a2"));
     await outcome();
-    expect(status("a2")).toBe("WATCHED");
-    expect(status("z1")).toBe("UPCOMING");
+    expect(await status("a2")).toBe("WATCHED");
+    expect(await status("z1")).toBe("UPCOMING");
   });
 });
 

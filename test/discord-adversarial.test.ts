@@ -14,7 +14,7 @@ vi.mock("~/models/movie.server", () => ({
 vi.mock("../services/tmdb", () => ({ searchMovie: mocks.searchMovie }));
 
 import { action } from "../app/routes/api.discord.interactions";
-import { MovieStatus } from "~/lib/generated/prisma/enums";
+import { MovieStatus } from "~/db/schema";
 
 const { publicKey, privateKey } = generateKeyPairSync("ed25519");
 const PUBLIC_HEX = publicKey

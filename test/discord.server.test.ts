@@ -14,7 +14,7 @@ vi.mock("~/models/movie.server", () => ({
 }));
 
 import { action } from "~/routes/api.discord.interactions";
-import { MovieStatus } from "~/lib/generated/prisma/enums";
+import { MovieStatus } from "~/db/schema";
 import {
   buildSaveInput,
   buildSuccessMessage,
