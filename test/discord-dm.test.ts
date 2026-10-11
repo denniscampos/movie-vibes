@@ -24,7 +24,7 @@ import {
   randomMovieCommand,
   spinCommand,
 } from "../app/utils/discord-commands";
-import { MovieStatus } from "~/lib/generated/prisma/enums";
+import { MovieStatus } from "~/db/schema";
 
 const { publicKey, privateKey } = generateKeyPairSync("ed25519");
 const PUBLIC_HEX = publicKey

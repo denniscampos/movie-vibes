@@ -3,7 +3,7 @@
 ## Tech Stack
 
 - Remix
-- Prisma / Postgres
+- Drizzle ORM / Postgres
 
 ## Getting Stared
 
@@ -15,11 +15,13 @@ pnpm install
 
 Run `cp .env.sample .env`
 
-Generate and migrate your DB
+Migrate your DB
 
 ```bash
-pnpm exec prisma migrate dev && pnpm exec prisma generate
+pnpm db:migrate
 ```
+
+After changing `app/db/schema.ts`, create a migration with `pnpm db:generate` and commit the new files in `drizzle/`.
 
 Run the server
 

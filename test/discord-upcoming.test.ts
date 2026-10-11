@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { generateKeyPairSync, sign } from "node:crypto";
-import { MovieStatus } from "~/lib/generated/prisma/enums";
+import { MovieStatus } from "~/db/schema";
 
 const mocks = vi.hoisted(() => ({
   createMovie: vi.fn(),

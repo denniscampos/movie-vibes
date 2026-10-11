@@ -5,10 +5,6 @@ const mocks = vi.hoisted(() => ({
   findUpcomingMovies: vi.fn(),
   findUpcomingMoviesByName: vi.fn(),
   markUpcomingMovieWatched: vi.fn(),
-  dbMovie: {
-    findFirst: vi.fn(),
-    updateMany: vi.fn(),
-  },
 }));
 
 vi.mock("~/models/movie.server", async (importOriginal) => {
@@ -20,12 +16,18 @@ vi.mock("~/models/movie.server", async (importOriginal) => {
     markUpcomingMovieWatched: mocks.markUpcomingMovieWatched,
   };
 });
-vi.mock("~/db.server", () => ({ default: { movie: mocks.dbMovie } }));
+vi.mock("~/db.server", async () => ({
+  default: await (await import("./helpers/test-db")).createTestDb(),
+}));
 vi.mock("../services/tmdb", () => ({
   searchMovie: vi.fn(),
   searchMovieById: vi.fn(),
 }));
 
+import { eq } from "drizzle-orm";
+import db from "~/db.server";
+import { movie, MovieStatus } from "~/db/schema";
+import { resetTestDb, seedMovies, type TestDb } from "./helpers/test-db";
 import { action } from "../app/routes/api.discord.interactions";
 import { markWatchedCommand, commands } from "../app/utils/discord-commands";
 import {
@@ -116,8 +118,6 @@ beforeEach(() => {
   mocks.markUpcomingMovieWatched
     .mockReset()
     .mockResolvedValue({ movieName: "Inception", releaseDate: "2010" });
-  mocks.dbMovie.findFirst.mockReset();
-  mocks.dbMovie.updateMany.mockReset();
   fetchMock = vi.fn().mockResolvedValue(new Response("{}", { status: 200 }));
   vi.stubGlobal("fetch", fetchMock);
 });
@@ -272,34 +272,56 @@ describe("command", () => {
 });
 
 describe("markUpcomingMovieWatched (conditional update)", () => {
-  it("only writes status, conditional on UPCOMING", async () => {
-    mocks.dbMovie.findFirst.mockResolvedValue({
+  const testDb = db as unknown as TestDb;
+  const rows = () =>
+    testDb.select().from(movie).orderBy(movie.movieName);
+  const idOf = async (movieName: string) =>
+    (await testDb.select().from(movie).where(eq(movie.movieName, movieName)))[0].id;
+
+  beforeEach(async () => {
+    await resetTestDb(testDb);
+    await seedMovies(testDb, [
+      { movieName: "Inception", releaseDate: "2010", status: MovieStatus.UPCOMING },
+      { movieName: "Heat", releaseDate: "1995", status: MovieStatus.UPCOMING },
+      { movieName: "Alien", releaseDate: "1979", status: MovieStatus.NOT_WATCHED },
+    ]);
+  });
+
+  it("only writes status, only on that UPCOMING movie", async () => {
+    const before = await rows();
+    const id = await idOf("Inception");
+    expect(await realMark(id)).toEqual({
       movieName: "Inception",
       releaseDate: "2010",
     });
-    mocks.dbMovie.updateMany.mockResolvedValue({ count: 1 });
-    expect(await realMark("abc")).toEqual({
-      movieName: "Inception",
-      releaseDate: "2010",
+    const after = await rows();
+    const changed = after.find((m) => m.id === id)!;
+    const was = before.find((m) => m.id === id)!;
+    expect({ ...changed, updatedAt: was.updatedAt }).toEqual({
+      ...was,
+      status: MovieStatus.WATCHED,
     });
-    expect(mocks.dbMovie.updateMany).toHaveBeenCalledWith({
-      where: { id: "abc", status: "UPCOMING" },
-      data: { status: "WATCHED" },
-    });
+    expect(after.filter((m) => m.id !== id)).toEqual(
+      before.filter((m) => m.id !== id),
+    );
   });
 
   it("returns undefined without writing when the movie is not UPCOMING", async () => {
-    mocks.dbMovie.findFirst.mockResolvedValue(null);
-    expect(await realMark("abc")).toBeUndefined();
-    expect(mocks.dbMovie.updateMany).not.toHaveBeenCalled();
+    const before = await rows();
+    expect(await realMark(await idOf("Alien"))).toBeUndefined();
+    expect(await realMark("ghost")).toBeUndefined();
+    expect(await rows()).toEqual(before);
   });
 
-  it("returns undefined when the status changed before the write", async () => {
-    mocks.dbMovie.findFirst.mockResolvedValue({
-      movieName: "Inception",
-      releaseDate: "2010",
-    });
-    mocks.dbMovie.updateMany.mockResolvedValue({ count: 0 });
-    expect(await realMark("abc")).toBeUndefined();
+  it("returns undefined once the movie is no longer UPCOMING", async () => {
+    const id = await idOf("Inception");
+    await testDb
+      .update(movie)
+      .set({ status: MovieStatus.NOT_WATCHED })
+      .where(eq(movie.id, id));
+    expect(await realMark(id)).toBeUndefined();
+    expect((await rows()).find((m) => m.id === id)!.status).toBe(
+      MovieStatus.NOT_WATCHED,
+    );
   });
 });

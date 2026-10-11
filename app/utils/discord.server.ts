@@ -1,5 +1,5 @@
 import { verifyKey } from "discord-interactions";
-import { MovieStatus } from "~/lib/generated/prisma/enums";
+import { MovieStatus } from "~/db/schema";
 
 export const INTERACTION_PING = 1;
 export const INTERACTION_APPLICATION_COMMAND = 2;

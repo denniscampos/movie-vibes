@@ -4,7 +4,6 @@ import { readFileSync } from "node:fs";
 
 const mocks = vi.hoisted(() => ({
   pickRandomUpcomingPicker: vi.fn(),
-  dbMovie: { findMany: vi.fn() },
 }));
 
 vi.mock("~/models/movie.server", async (importOriginal) => {
@@ -14,7 +13,9 @@ vi.mock("~/models/movie.server", async (importOriginal) => {
     pickRandomUpcomingPicker: mocks.pickRandomUpcomingPicker,
   };
 });
-vi.mock("~/db.server", () => ({ default: { movie: mocks.dbMovie } }));
+vi.mock("~/db.server", async () => ({
+  default: await (await import("./helpers/test-db")).createTestDb(),
+}));
 vi.mock("../services/tmdb", () => ({
   searchMovie: vi.fn(),
   searchMovieById: vi.fn(),
@@ -29,7 +30,9 @@ import {
   buildSpinMessage,
 } from "../app/utils/discord.server";
 import { uniquePickerNames } from "../app/utils/pickers";
-import { MovieStatus } from "~/lib/generated/prisma/enums";
+import db from "~/db.server";
+import { movie, MovieStatus } from "~/db/schema";
+import { resetTestDb, seedMovies, type TestDb } from "./helpers/test-db";
 
 // The real model function, bypassing the route's mock.
 const { pickRandomUpcomingPicker: realPick } = await vi.importActual<
@@ -93,7 +96,6 @@ beforeEach(() => {
   process.env.DISCORD_ALLOWED_GUILD_IDS = "g1";
   process.env.DISCORD_ALLOWED_USER_IDS = "";
   mocks.pickRandomUpcomingPicker.mockReset().mockResolvedValue("Dennis");
-  mocks.dbMovie.findMany.mockReset();
   fetchMock = vi.fn().mockResolvedValue(new Response("{}", { status: 200 }));
   vi.stubGlobal("fetch", fetchMock);
 });
@@ -230,14 +232,27 @@ describe("pickRandomUpcomingPicker (real model)", () => {
     { selectedBy: "Cy" },
   ];
 
-  // db.movie only exposes findMany here, so any write would throw.
-  it("queries UPCOMING movies only, read-only", async () => {
-    mocks.dbMovie.findMany.mockResolvedValue(rows);
-    await realPick();
-    expect(mocks.dbMovie.findMany).toHaveBeenCalledWith({
-      where: { status: MovieStatus.UPCOMING },
-      select: { selectedBy: true },
-    });
+  const testDb = db as unknown as TestDb;
+  const seedUpcoming = (r: { selectedBy: string }[]) =>
+    seedMovies(
+      testDb,
+      r.map((m, i) => ({ movieName: `M${i}`, status: MovieStatus.UPCOMING, ...m })),
+    );
+
+  beforeEach(() => resetTestDb(testDb));
+
+  it("only considers UPCOMING movies and changes nothing", async () => {
+    await seedMovies(testDb, [
+      { movieName: "W", selectedBy: "Watcher", status: MovieStatus.WATCHED },
+      { movieName: "N", selectedBy: "Later", status: MovieStatus.NOT_WATCHED },
+      { movieName: "U", selectedBy: "Ana", status: MovieStatus.UPCOMING },
+    ]);
+    const before = await testDb.select().from(movie);
+    for (const r of [0, 0.5, 0.9999999]) {
+      vi.spyOn(Math, "random").mockReturnValue(r);
+      expect(await realPick()).toBe("Ana");
+    }
+    expect(await testDb.select().from(movie)).toEqual(before);
   });
 
   it.each([
@@ -245,20 +260,20 @@ describe("pickRandomUpcomingPicker (real model)", () => {
     [0.5, "Bo"],
     [0.9999999, "Cy"],
   ])("Math.random()=%s picks %s, unweighted and always in range", async (r, name) => {
-    mocks.dbMovie.findMany.mockResolvedValue(rows);
+    await seedUpcoming(rows);
     vi.spyOn(Math, "random").mockReturnValue(r);
     expect(await realPick()).toBe(name);
   });
 
   it("returns the only name when there is one picker", async () => {
-    mocks.dbMovie.findMany.mockResolvedValue([{ selectedBy: "Solo" }, { selectedBy: "Solo" }]);
+    await seedUpcoming([{ selectedBy: "Solo" }, { selectedBy: "Solo" }]);
     expect(await realPick()).toBe("Solo");
   });
 
   it.each([[[]], [[{ selectedBy: "" }, { selectedBy: " " }]]])(
     "returns undefined when nobody qualifies (%j)",
     async (r) => {
-      mocks.dbMovie.findMany.mockResolvedValue(r);
+      await seedUpcoming(r);
       expect(await realPick()).toBeUndefined();
     },
   );
